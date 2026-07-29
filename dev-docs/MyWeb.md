@@ -68,7 +68,17 @@ Astro + Tailwind CSS 4 + MDX + TypeScript + GitHub + Cloudflare Pages
 | 数据库 | 暂不需要 | 第一版不接数据库 |
 | 后台 CMS | 暂不需要 | 第一版本地写 Markdown / MDX |
 
-## 2.2 为什么第一版不租服务器
+## 2.2 线上地址
+
+当前 Cloudflare Pages 生产地址：
+
+```text
+https://myweb-649.pages.dev/
+```
+
+`main` 分支 push 后，由 Cloudflare Pages 自动构建并部署。
+
+## 2.3 为什么第一版不租服务器
 
 第一版主要功能都是静态可生成内容：
 
@@ -483,6 +493,7 @@ Framework preset: Astro
 Build command: npm run build
 Output directory: dist
 Production branch: main
+Production URL: https://myweb-649.pages.dev/
 ```
 
 ---

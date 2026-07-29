@@ -14,6 +14,8 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - TypeScript，使用 `astro/tsconfigs/strict`
 - 静态优先部署，目标平台为 GitHub + Cloudflare Pages
 
+线上地址：`https://myweb-649.pages.dev/`
+
 第一版不包含数据库、后端 API、登录系统、CMS 或访客上传能力。
 
 ## 常用命令
@@ -30,13 +32,17 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 
 已完成：
 
-- 中英文首页与 About 页面
+- 带沉浸式欢迎页的中英文首页
+- 三栏博客首页布局
+- 显式浅色 / 深色主题切换
+- 中英文 About 页面
 - `writing` / `projects` / `life` 三个公开内容频道
 - Blog 入口聚合 `writing` 与内部 `research` 内容源
 - 三类公开内容的列表页与详情页
+- Guestbook / Friends 中英文占位页
 - `/` 中文路由与 `/en` 英文路由
 - 基于 `translationKey` 的双语内容配对与语言切换回退
-- 首页精选项目、最新博客和生活记录取数
+- 首页最新项目、最新博客和生活记录取数
 - 占位头像、封面图和基础视觉系统
 - `npm run build` 曾构建通过
 
@@ -108,9 +114,9 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 
 首页当前按发布时间倒序自动取数：
 
-- Featured Projects：`projects` 中 `featured: true` 的已发布内容，最多 3 条
-- Latest Blog：`writing` 与 `research` 中已发布内容合并后，最多 6 条
-- Life Notes：`life` 中已发布内容，最多 3 条
+- Open Projects：`projects` 中已发布内容，最多 3 条
+- Latest Blog：`writing` 与 `research` 中已发布内容合并后，最多 4 条
+- Life Notes：`life` 中已发布内容，最多 2 条
 
 ## 当前 TODO
 

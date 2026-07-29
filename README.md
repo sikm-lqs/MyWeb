@@ -39,6 +39,16 @@ MyWeb 是 sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、�
 
 第一版不引入数据库、后端 API、登录系统和 CMS。留言墙目前是占位入口，后续再决定存储与审核方案。
 
+## 线上地址
+
+当前 Cloudflare Pages 生产地址：
+
+```text
+https://myweb-649.pages.dev/
+```
+
+`main` 分支 push 后，由 Cloudflare Pages 自动构建并部署。
+
 ## 开发进展
 
 已完成：

@@ -18,6 +18,8 @@ The site is intended to be a durable personal knowledge and work homepage, not a
 - TypeScript with `astro/tsconfigs/strict`
 - Static-first deployment, intended for GitHub + Cloudflare Pages
 
+Production URL: `https://myweb-649.pages.dev/`
+
 Do not assume there is a backend, database, auth system, CMS, or upload service. The first version is file-driven and static.
 
 ## Commands
@@ -36,16 +38,18 @@ Required Node.js version: `>=22.12.0`
 
 Implemented:
 
-- Chinese and English home pages
+- Chinese and English home pages with a Welcome Gate entry
 - Chinese and English About pages
 - Three public content channels: `writing`, `projects`, `life`
 - Blog pages aggregate `writing` and the internal `research` content source
 - List and detail pages for each public channel
+- Guestbook and friends/link placeholder pages
 - Chinese routes under `/` and English routes under `/en`
 - Language switching based on `translationKey`
 - Fallback to the target-language collection page when a translation is missing
-- Home page data queries for featured projects and latest content
-- Denser home layout with Projects and Blog presented in the same content band
+- Explicit light/dark theme switching
+- Home page data queries for latest projects, latest blog entries, and life notes
+- Three-column home layout with profile/navigation, theme shelf/latest content, and side widgets
 - Placeholder avatar and cover images
 
 Known next priorities:
@@ -121,9 +125,9 @@ Language switching searches for a non-draft entry in the same collection with th
 
 The home page is data-driven:
 
-- Featured Projects: latest published `projects` entries with `featured: true`, max 3
-- Latest Blog: latest published `writing` and `research` entries combined, max 6
-- Life Notes: latest published `life` entries, max 3
+- Open Projects: latest published `projects` entries, max 3
+- Latest Blog: latest published `writing` and `research` entries combined, max 4
+- Life Notes: latest published `life` entries, max 2
 
 Entries are sorted by `publishedAt` descending.
 
