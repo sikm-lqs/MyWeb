@@ -27,6 +27,12 @@ export const getAboutPath = (lang: SiteLang) =>
 
 export const getHomePath = (lang: SiteLang) => (isEnglish(lang) ? "/en" : "/");
 
+export const getGuestbookPath = (lang: SiteLang) =>
+  isEnglish(lang) ? "/en/guestbook" : "/guestbook";
+
+export const getFriendsPath = (lang: SiteLang) =>
+  isEnglish(lang) ? "/en/friends" : "/friends";
+
 export const getOppositeLang = (lang: SiteLang): SiteLang =>
   isEnglish(lang) ? DEFAULT_LANG : "en";
 

@@ -1,10 +1,13 @@
 ---
 import Container from "./Container.astro";
 import LanguageSwitch from "../ui/LanguageSwitch.astro";
+import ThemeToggle from "../ui/ThemeToggle.astro";
 import { ui } from "../../i18n/ui";
 import {
   getAboutPath,
   getCollectionPath,
+  getFriendsPath,
+  getGuestbookPath,
   getHomePath,
   type SiteLang,
 } from "../../i18n/utils";
@@ -19,9 +22,12 @@ const { lang, currentPath, translationHref } = Astro.props;
 const copy = ui[lang];
 
 const navItems = [
+  { href: getHomePath(lang), label: copy.nav.home, key: "home" },
   { href: getCollectionPath("writing", lang), label: copy.nav.writing, key: "writing" },
   { href: getCollectionPath("projects", lang), label: copy.nav.projects, key: "projects" },
   { href: getCollectionPath("life", lang), label: copy.nav.life, key: "life" },
+  { href: getGuestbookPath(lang), label: copy.nav.guestbook, key: "guestbook" },
+  { href: getFriendsPath(lang), label: copy.nav.friends, key: "friends" },
   { href: getAboutPath(lang), label: copy.nav.about, key: "about" },
 ];
 
@@ -31,23 +37,23 @@ const isActive = (href: string) =>
     : currentPath === href || currentPath.startsWith(`${href}/`);
 ---
 
-<header class="sticky top-0 z-40 border-b border-[rgba(216,202,186,0.55)] bg-[rgba(247,244,237,0.82)] backdrop-blur-xl">
+<header class="site-header">
   <Container>
-    <div class="flex min-h-14 items-center justify-between gap-4 py-2">
+    <div class="site-header-inner">
       <a
         href={getHomePath(lang)}
-        class="text-sm font-semibold tracking-[0.12em] text-[var(--text-main)] uppercase"
+        class="site-brand"
       >
         sikm
       </a>
 
-      <nav class="hidden items-center gap-4 text-sm text-[var(--text-muted)] md:flex">
+      <nav class="site-nav">
         {navItems.map((item) => (
           <a
             href={item.href}
             class:list={[
-              "transition-colors duration-200 hover:text-[var(--text-main)]",
-              isActive(item.href) && "text-[var(--text-main)]",
+              "site-nav-link",
+              isActive(item.href) && "is-active",
             ]}
           >
             {item.label}
@@ -55,7 +61,8 @@ const isActive = (href: string) =>
         ))}
       </nav>
 
-      <div class="flex items-center gap-2 text-sm">
+      <div class="site-tools">
+        <ThemeToggle />
         <LanguageSwitch href={translationHref} label={copy.nav.languageSwitch} />
       </div>
     </div>

@@ -41,7 +41,7 @@ const horizontal = variant === "horizontal";
 ---
 
 <article class:list={[
-  "group h-full overflow-hidden border border-[rgba(216,202,186,0.78)] bg-[rgba(255,253,248,0.94)] transition duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-soft)]",
+  "content-card group h-full overflow-hidden transition duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-soft)]",
   horizontal ? "grid md:grid-cols-[minmax(12rem,0.38fr)_minmax(0,1fr)]" : "flex flex-col",
   horizontal ? "rounded-[1.25rem]" : compact ? "rounded-[1.2rem]" : "rounded-[1.35rem]",
 ]}>
@@ -49,9 +49,8 @@ const horizontal = variant === "horizontal";
     <a
       href={href}
       class:list={[
-        horizontal
-          ? "border-b border-[rgba(216,202,186,0.58)] md:border-b-0 md:border-r"
-          : "border-b border-[rgba(216,202,186,0.58)]",
+        "content-card-media",
+        horizontal ? "md:border-b-0 md:border-r" : "",
       ]}
     >
       <img
@@ -94,7 +93,7 @@ const horizontal = variant === "horizontal";
         {hiddenStackCount > 0 && <Badge compact>{`+${hiddenStackCount}`}</Badge>}
       </div>
       <div class:list={[
-        "flex flex-wrap items-center border-t border-[rgba(216,202,186,0.4)] text-sm text-[var(--text-muted)]",
+        "content-card-links flex flex-wrap items-center text-sm text-[var(--text-muted)]",
         compact ? "gap-3 pt-2" : "gap-4 pt-2.5",
       ]}>
         {repoUrl && (

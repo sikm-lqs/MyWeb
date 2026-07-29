@@ -2,10 +2,13 @@ import type { SiteCollection, SiteLang } from "./utils";
 
 type Dictionary = {
   nav: {
+    home: string;
     writing: string;
     projects: string;
     research: string;
     life: string;
+    guestbook: string;
+    friends: string;
     about: string;
     languageSwitch: string;
   };
@@ -18,6 +21,22 @@ type Dictionary = {
     secondaryCta: string;
   };
   home: {
+    welcomeTitle: string;
+    welcomeDescription: string;
+    welcomeCta: string;
+    nowTitle: string;
+    nowDescription: string;
+    nowItems: {
+      label: string;
+      value: string;
+    }[];
+    themesTitle: string;
+    themesDescription: string;
+    themeShelf: {
+      title: string;
+      description: string;
+      meta: string;
+    }[];
     focusTitle: string;
     focusDescription: string;
     projectsTitle: string;
@@ -28,6 +47,8 @@ type Dictionary = {
     researchDescription: string;
     lifeTitle: string;
     lifeDescription: string;
+    lifeTeaserTitle: string;
+    lifeTeaserDescription: string;
   };
   collections: Record<
     SiteCollection,
@@ -74,10 +95,13 @@ type Dictionary = {
 export const ui: Record<SiteLang, Dictionary> = {
   "zh-CN": {
     nav: {
+      home: "首页",
       writing: "博客",
       projects: "项目",
       research: "研究",
       life: "生活",
+      guestbook: "留言",
+      friends: "友链",
       about: "关于",
       languageSwitch: "EN",
     },
@@ -86,21 +110,69 @@ export const ui: Record<SiteLang, Dictionary> = {
       title: "你好，我是 sikm。",
       subtitle: "Agent / LLM 算法方向研究生",
       description:
-        "我在这里长期沉淀关于 Agent Harness、llm相关论文阅读和工程实践的博客与项目，也保留少量真实生活记录。",
+        "我在这里长期沉淀关于 Agent、评测、RAG、工具调用和工程实践的博客与项目，也保留少量真实生活记录。",
       primaryCta: "阅读博客",
       secondaryCta: "查看项目",
     },
     home: {
+      welcomeTitle: "欢迎来到 sikm 的博客小屋。",
+      welcomeDescription:
+        "这里存放一些关于 Agent、LLM、工程实践，以及生活切片的长期记录。",
+      welcomeCta: "进入小屋",
+      nowTitle: "当前状态",
+      nowDescription: "桌面上暂时只放一张便签，记录此刻最真实的关注。",
+      nowItems: [
+        {
+          label: "最近在研究",
+          value: "Agent",
+        },
+      ],
+      themesTitle: "主题书架",
+      themesDescription: "长期会反复翻看的方向，比时间线更能说明我在关心什么。",
+      themeShelf: [
+        {
+          title: "Agent Systems",
+          description: "从工作流、状态、工具调用到可运行系统的整体设计。",
+          meta: "systems / workflow",
+        },
+        {
+          title: "Agent Evaluation",
+          description: "关注评测稳定性、任务定义、失效模式和可复现观察。",
+          meta: "eval / reliability",
+        },
+        {
+          title: "Harness / Workflow",
+          description: "把实验、工具、日志和回看流程组织成能持续迭代的工程骨架。",
+          meta: "harness / process",
+        },
+        {
+          title: "LLM Reading Notes",
+          description: "论文、技术报告和源码阅读中的结构化笔记。",
+          meta: "paper / notes",
+        },
+        {
+          title: "Engineering Practice",
+          description: "把想法做成项目时留下的实现选择、问题和复盘。",
+          meta: "build / ship",
+        },
+        {
+          title: "Life Fragments",
+          description: "少量生活切片，让这个站不只剩下技术陈列。",
+          meta: "photo / daily",
+        },
+      ],
       focusTitle: "当前关注",
-      focusDescription: "agent设计 | harness",
-      projectsTitle: "项目",
-      projectsDescription: "有趣&实用的repo",
-      writingTitle: "博客",
-      writingDescription: "技术文章、论文阅读、实验观察和工程思考",
+      focusDescription: "Agent 设计、评测和 harness。",
+      projectsTitle: "开源项目",
+      projectsDescription: "偏 GitHub repo 管理，先用手动维护保证每个项目都有清楚说明。",
+      writingTitle: "最近写作",
+      writingDescription: "技术文章、论文阅读、实验观察和工程思考会汇入同一个博客流。",
       researchTitle: "研究笔记",
       researchDescription: "论文阅读、实验观察和问题拆解。",
-      lifeTitle: "生活记录",
-      lifeDescription: "保持人的尺度，而不是只剩技术陈列。",
+      lifeTitle: "生活切片",
+      lifeDescription: "首页只放一点生活的光，真正的生活页后续以照片墙为主。",
+      lifeTeaserTitle: "照片墙会放在这里慢慢长出来",
+      lifeTeaserDescription: "训练、阅读、日常与一些不太需要解释的瞬间，会成为博客小屋里的窗。",
     },
     collections: {
       writing: {
@@ -160,16 +232,17 @@ export const ui: Record<SiteLang, Dictionary> = {
         "GitHub、邮箱与公开渠道将在正式上线前补充。当前版本先完成信息结构、内容系统和多语言框架。",
     },
     footer: "Built with Astro, MDX, Tailwind and a bias toward clear thinking.",
-    currentFocus: [
-      "LLM","Agent","RL"
-    ],
+    currentFocus: ["LLM", "Agent", "RL"],
   },
   en: {
     nav: {
+      home: "Home",
       writing: "Blog",
       projects: "Projects",
       research: "Research",
       life: "Life",
+      guestbook: "Guestbook",
+      friends: "Links",
       about: "About",
       languageSwitch: "中文",
     },
@@ -183,16 +256,64 @@ export const ui: Record<SiteLang, Dictionary> = {
       secondaryCta: "View projects",
     },
     home: {
+      welcomeTitle: "Welcome to sikm's blog cottage.",
+      welcomeDescription:
+        "A long-term place for notes on Agent, LLMs, engineering practice, and small fragments of life.",
+      welcomeCta: "Enter",
+      nowTitle: "Now",
+      nowDescription: "A small desk note for what is actually holding my attention.",
+      nowItems: [
+        {
+          label: "Researching",
+          value: "Agent",
+        },
+      ],
+      themesTitle: "Theme Shelf",
+      themesDescription: "Long-running directions I return to more often than a simple timeline can show.",
+      themeShelf: [
+        {
+          title: "Agent Systems",
+          description: "Workflow, state, tool use, and the shape of runnable agent systems.",
+          meta: "systems / workflow",
+        },
+        {
+          title: "Agent Evaluation",
+          description: "Evaluation stability, task definitions, failure modes, and reproducible observations.",
+          meta: "eval / reliability",
+        },
+        {
+          title: "Harness / Workflow",
+          description: "Engineering structures for experiments, tools, logs, and iterative review.",
+          meta: "harness / process",
+        },
+        {
+          title: "LLM Reading Notes",
+          description: "Structured notes from papers, technical reports, and source reading.",
+          meta: "paper / notes",
+        },
+        {
+          title: "Engineering Practice",
+          description: "Implementation choices, problems, and reviews from turning ideas into projects.",
+          meta: "build / ship",
+        },
+        {
+          title: "Life Fragments",
+          description: "A small layer of life so the site does not become only a technical display.",
+          meta: "photo / daily",
+        },
+      ],
       focusTitle: "Current focus",
-      focusDescription: "A few themes I am actively pushing forward.",
-      projectsTitle: "Featured projects",
-      projectsDescription: "Case studies that show problem framing, technical choices, and outcomes.",
-      writingTitle: "Latest blog",
+      focusDescription: "Agent design, evaluation, and harness work.",
+      projectsTitle: "Open projects",
+      projectsDescription: "A manually curated repo-style list with clear context for each project.",
+      writingTitle: "Recent writing",
       writingDescription: "Technical writing, paper notes, experiment observations, and engineering thinking in one stream.",
       researchTitle: "Research notes",
       researchDescription: "Paper reading, experiment observations, and question breakdowns.",
-      lifeTitle: "Life notes",
-      lifeDescription: "A small amount of human context beyond pure technical output.",
+      lifeTitle: "Life fragments",
+      lifeDescription: "Only a small glimmer on the home page; the life page can grow into a photo wall later.",
+      lifeTeaserTitle: "A photo wall will grow here",
+      lifeTeaserDescription: "Training, reading, daily scenes, and moments that do not need much explanation.",
     },
     collections: {
       writing: {
@@ -252,10 +373,6 @@ export const ui: Record<SiteLang, Dictionary> = {
         "GitHub, email, and public contact channels will be added before the public launch. This iteration focuses on structure, content workflows, and bilingual delivery.",
     },
     footer: "Built with Astro, MDX, Tailwind, and a preference for calm engineering.",
-    currentFocus: [
-      "LLM",
-      "Agent",
-      "RL",
-    ],
+    currentFocus: ["LLM", "Agent", "RL"],
   },
 };

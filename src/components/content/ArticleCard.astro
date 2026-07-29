@@ -34,11 +34,11 @@ const hasCover = variant === "default" && cover;
 ---
 
 <article class:list={[
-  "group flex h-full flex-col overflow-hidden border border-[rgba(216,202,186,0.78)] bg-[rgba(255,253,248,0.92)] transition duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-soft)]",
+  "content-card group flex h-full flex-col overflow-hidden transition duration-200 hover:-translate-y-1 hover:shadow-[var(--shadow-soft)]",
   variant === "compact" ? "rounded-[1.1rem]" : "rounded-[1.35rem]",
 ]}>
   {hasCover && (
-    <a href={href} class="border-b border-[rgba(216,202,186,0.58)]">
+    <a href={href} class="content-card-media">
       <img src={cover} alt={coverAlt} class="h-32 w-full object-cover sm:h-36" loading="lazy" />
     </a>
   )}

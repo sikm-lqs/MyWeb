@@ -1,7 +1,6 @@
 ---
 import Container from "../layout/Container.astro";
 import Badge from "../ui/Badge.astro";
-import Button from "../ui/Button.astro";
 import SectionTitle from "../ui/SectionTitle.astro";
 import ArticleCard from "../content/ArticleCard.astro";
 import ProjectCard from "../content/ProjectCard.astro";
@@ -9,15 +8,18 @@ import { ui } from "../../i18n/ui";
 import {
   BILIBILI_URL,
   GITHUB_URL,
+  getAboutPath,
   getCollectionPath,
+  getFriendsPath,
+  getGuestbookPath,
   PROFILE_AVATAR_SRC,
   type SiteLang,
 } from "../../i18n/utils";
 import {
   getBlogEntryPath,
+  getEntryPath,
   getLatestBlogEntries,
   getLatestEntries,
-  getEntryPath,
 } from "../../lib/content/translations";
 
 interface Props {
@@ -27,212 +29,212 @@ interface Props {
 const { lang } = Astro.props;
 const copy = ui[lang];
 const [latestProjects, latestBlog, latestLife] = await Promise.all([
-  getLatestEntries("projects", lang, 4),
-  getLatestBlogEntries(lang, 6),
-  getLatestEntries("life", lang, 3),
+  getLatestEntries("projects", lang, 3),
+  getLatestBlogEntries(lang, 4),
+  getLatestEntries("life", lang, 2),
 ]);
-const primaryBlog = latestBlog[0];
-const secondaryBlog = latestBlog.slice(1, 5);
-const primaryProject = latestProjects[0];
-const secondaryProjects = latestProjects.slice(1, 4);
+
+const sideNavItems = [
+  { href: getCollectionPath("writing", lang), label: copy.nav.writing },
+  { href: getCollectionPath("projects", lang), label: copy.nav.projects },
+  { href: getCollectionPath("life", lang), label: copy.nav.life },
+  { href: getGuestbookPath(lang), label: copy.nav.guestbook },
+  { href: getFriendsPath(lang), label: copy.nav.friends },
+  { href: getAboutPath(lang), label: copy.nav.about },
+];
+
+const themeHrefs = [
+  getCollectionPath("writing", lang),
+  getCollectionPath("writing", lang),
+  getCollectionPath("projects", lang),
+  getCollectionPath("writing", lang),
+  getCollectionPath("projects", lang),
+  getCollectionPath("life", lang),
+];
 ---
 
-<section class="pb-4 pt-7 sm:pt-8 lg:pb-6 lg:pt-7">
-  <Container>
-    <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17.5rem] lg:items-start xl:gap-10">
-      <div class="pt-2">
-        <p class="eyebrow">{copy.hero.eyebrow}</p>
-        <h1 class="mt-3 max-w-[46rem] text-[3rem] font-semibold tracking-tight text-[var(--text-main)] sm:text-[3.35rem] lg:text-[3.55rem]">
-          {copy.hero.title}
-        </h1>
-        <p class="mt-3.5 text-[0.98rem] text-[var(--text-muted)] sm:text-[1.04rem]">{copy.hero.subtitle}</p>
-        <p class="mt-3 max-w-[44rem] text-sm leading-[1.6rem] text-[var(--text-muted)] sm:text-[0.98rem]">
-          {copy.hero.description}
-        </p>
-        <div class="mt-4 flex flex-wrap gap-2.5">
-          <Button href={getCollectionPath("writing", lang)}>{copy.hero.primaryCta}</Button>
-          <Button href={getCollectionPath("projects", lang)} variant="secondary">
-            {copy.hero.secondaryCta}
-          </Button>
-        </div>
-      </div>
+<div class="welcome-gate" data-welcome-gate>
+  <div class="welcome-poster">
+    <div class="welcome-lines" aria-hidden="true"></div>
+    <div class="welcome-symbol symbol-book" aria-hidden="true"></div>
+    <div class="welcome-symbol symbol-mac" aria-hidden="true"></div>
+    <div class="welcome-symbol symbol-agent" aria-hidden="true"></div>
+    <div class="welcome-symbol symbol-training" aria-hidden="true"></div>
 
-      <div class="lg:justify-self-end">
-        <div class="soft-panel overflow-hidden rounded-[1.35rem] p-2.5">
-          <div class="rounded-[1rem] border border-[rgba(216,202,186,0.65)] bg-[rgba(255,250,242,0.74)] p-2">
-            <img
-              src={PROFILE_AVATAR_SRC}
-              alt="sikm avatar"
-              class="aspect-[4/3] w-full rounded-[0.85rem] border border-[rgba(216,202,186,0.58)] object-cover lg:aspect-square"
-              loading="lazy"
-            />
-          </div>
-
-          <div class="mt-2.5 rounded-[1rem] border border-[rgba(216,202,186,0.52)] bg-[rgba(255,253,248,0.76)] p-3.5">
-            <p class="eyebrow">{copy.labels.currentFocus}</p>
-            <h2 class="mt-1.5 text-base font-semibold text-[var(--text-main)]">
-              {copy.home.focusTitle}
-            </h2>
-            <p class="mt-1.5 text-xs leading-5 text-[var(--text-muted)]">{copy.home.focusDescription}</p>
-            <div class="mt-2.5 flex flex-wrap gap-1.5">
-              {copy.currentFocus.slice(0, 2).map((item) => (
-                <Badge compact>{item}</Badge>
-              ))}
-              {copy.currentFocus.length > 2 && <Badge compact>{`+${copy.currentFocus.length - 2}`}</Badge>}
-            </div>
-
-            <div class="mt-3 border-t border-[rgba(216,202,186,0.4)] pt-2.5">
-              <p class="text-[0.72rem] font-medium uppercase tracking-[0.08em] text-[var(--text-subtle)]">
-                {copy.labels.links}
-              </p>
-              <div class="mt-2 flex flex-wrap gap-1.5">
-                <a
-                  href={GITHUB_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  class="inline-flex items-center rounded-full border border-[rgba(216,202,186,0.72)] bg-[rgba(255,253,248,0.9)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:border-[rgba(200,111,74,0.32)] hover:text-[var(--text-main)]"
-                >
-                  {copy.labels.github}
-                </a>
-                <a
-                  href={BILIBILI_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                  class="inline-flex items-center rounded-full border border-[rgba(216,202,186,0.72)] bg-[rgba(255,253,248,0.9)] px-2.5 py-1 text-xs font-medium text-[var(--text-muted)] transition hover:border-[rgba(200,111,74,0.32)] hover:text-[var(--text-main)]"
-                >
-                  {copy.labels.bilibili}
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </Container>
-</section>
-
-<section class="section-band py-7 lg:py-8">
-  <Container>
-    <div class="flex flex-wrap items-end justify-between gap-4">
-      <SectionTitle
-        title={copy.collections.writing.title}
-        description={copy.home.writingDescription}
-      />
-      <a
-        href={getCollectionPath("writing", lang)}
-        class="inline-flex items-center rounded-full border border-[rgba(216,202,186,0.82)] bg-[rgba(255,253,248,0.78)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition hover:border-[rgba(200,111,74,0.32)] hover:text-[var(--text-main)]"
-      >
-        {copy.labels.more}
-      </a>
+    <div class="welcome-avatar">
+      <img src={PROFILE_AVATAR_SRC} alt="sikm avatar" loading="eager" />
     </div>
 
-    <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] lg:items-stretch">
-      {
-        primaryBlog && (
-          <ArticleCard
-            href={getBlogEntryPath(lang, primaryBlog)}
-            title={primaryBlog.data.title}
-            summary={primaryBlog.data.summary}
-            publishedAt={primaryBlog.data.publishedAt}
-            tags={primaryBlog.data.tags}
-            readTime={primaryBlog.data.readTime}
-            lang={lang}
-            cover={primaryBlog.data.cover}
-            coverAlt={primaryBlog.data.coverAlt}
-          />
-        )
-      }
-      <div class="grid gap-4 sm:grid-cols-2">
-        {secondaryBlog.map((entry) => (
-          <ArticleCard
-            href={getBlogEntryPath(lang, entry)}
-            title={entry.data.title}
-            summary={entry.data.summary}
-            publishedAt={entry.data.publishedAt}
-            tags={entry.data.tags}
-            readTime={entry.data.readTime}
-            lang={lang}
-            variant="compact"
-          />
+    <div class="welcome-copy">
+      <p class="eyebrow">{copy.hero.eyebrow}</p>
+      <h1>{copy.home.welcomeTitle}</h1>
+      <p>{copy.home.welcomeDescription}</p>
+      <div class="welcome-actions">
+        <button type="button" data-enter-site>{copy.home.welcomeCta}</button>
+        <a href={getCollectionPath("writing", lang)}>{copy.hero.primaryCta}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<Container>
+  <div class="home-dashboard">
+    <aside class="profile-rail">
+      <section class="profile-card">
+        <img src={PROFILE_AVATAR_SRC} alt="sikm avatar" loading="lazy" />
+        <h2>sikm</h2>
+        <p>{copy.hero.description}</p>
+        <div class="profile-links">
+          <a href={GITHUB_URL} target="_blank" rel="noreferrer">{copy.labels.github}</a>
+          <a href={BILIBILI_URL} target="_blank" rel="noreferrer">{copy.labels.bilibili}</a>
+        </div>
+      </section>
+
+      <nav class="side-nav" aria-label="Home navigation">
+        {sideNavItems.map((item) => (
+          <a href={item.href}>{item.label}</a>
         ))}
-      </div>
-    </div>
+      </nav>
+    </aside>
 
-    <div class="mt-8 border-t border-[rgba(216,202,186,0.45)] pt-7">
-      <div class="flex flex-wrap items-end justify-between gap-4">
+    <main class="content-feed">
+      <section class="feed-section">
         <SectionTitle
-          title={copy.collections.projects.title}
-          description={copy.home.projectsDescription}
+          eyebrow={copy.labels.featured}
+          title={copy.home.themesTitle}
+          description={copy.home.themesDescription}
         />
-        <a
-          href={getCollectionPath("projects", lang)}
-          class="inline-flex items-center rounded-full border border-[rgba(216,202,186,0.82)] bg-[rgba(255,253,248,0.78)] px-4 py-2 text-sm font-medium text-[var(--text-muted)] transition hover:border-[rgba(200,111,74,0.32)] hover:text-[var(--text-main)]"
-        >
-          {copy.labels.more}
-        </a>
-      </div>
-      <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)] lg:items-stretch">
-        {
-          primaryProject && (
-            <ProjectCard
-              href={getEntryPath("projects", lang, primaryProject)}
-              title={primaryProject.data.title}
-              summary={primaryProject.data.summary}
-              stack={primaryProject.data.stack}
-              publishedAt={primaryProject.data.publishedAt}
-              lang={lang}
-              cover={primaryProject.data.cover}
-              coverAlt={primaryProject.data.coverAlt}
-              repoUrl={primaryProject.data.repoUrl}
-              demoUrl={primaryProject.data.demoUrl}
-              showStatus={false}
-              variant="horizontal"
-            />
-          )
-        }
-        <div class="grid gap-4 sm:grid-cols-2">
-          {secondaryProjects.map((entry) => (
-            <ProjectCard
-              href={getEntryPath("projects", lang, entry)}
-              title={entry.data.title}
-              summary={entry.data.summary}
-              stack={entry.data.stack}
-              publishedAt={entry.data.publishedAt}
-              lang={lang}
-              repoUrl={entry.data.repoUrl}
-              demoUrl={entry.data.demoUrl}
-              showStatus={false}
-              variant="compact"
-            />
+        <div class="theme-shelf compact-shelf mt-5">
+          {copy.home.themeShelf.map((theme, index) => (
+            <a class="theme-book" href={themeHrefs[index]} style={`--book-index: ${index + 1}`}>
+              <div class="theme-book-spine" aria-hidden="true"></div>
+              <div>
+                <p>{theme.meta}</p>
+                <h3>{theme.title}</h3>
+                <span>{theme.description}</span>
+              </div>
+            </a>
           ))}
         </div>
-      </div>
-    </div>
+      </section>
 
-    {latestLife.length > 0 && (
-      <div class="mt-8 border-t border-[rgba(216,202,186,0.45)] pt-7">
-        <SectionTitle
-          eyebrow={copy.labels.latest}
-          title={copy.home.lifeTitle}
-          description={copy.home.lifeDescription}
-        />
-        <div class="mt-5 grid gap-4 md:grid-cols-3">
-          {latestLife.map((entry) => (
+      <section class="feed-section">
+        <div class="section-heading-row">
+          <SectionTitle
+            eyebrow={copy.labels.latest}
+            title={copy.home.writingTitle}
+            description={copy.home.writingDescription}
+          />
+          <a href={getCollectionPath("writing", lang)}>{copy.labels.more}</a>
+        </div>
+        <div class="article-stream">
+          {latestBlog.map((entry, index) => (
             <ArticleCard
-              href={getEntryPath("life", lang, entry)}
+              href={getBlogEntryPath(lang, entry)}
               title={entry.data.title}
               summary={entry.data.summary}
               publishedAt={entry.data.publishedAt}
               tags={entry.data.tags}
               readTime={entry.data.readTime}
               lang={lang}
+              cover={index === 0 ? entry.data.cover : undefined}
+              coverAlt={entry.data.coverAlt}
+              variant={index === 0 ? "default" : "compact"}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section class="feed-section">
+        <div class="section-heading-row">
+          <SectionTitle
+            eyebrow={copy.labels.featured}
+            title={copy.home.projectsTitle}
+            description={copy.home.projectsDescription}
+          />
+          <a href={getCollectionPath("projects", lang)}>{copy.labels.more}</a>
+        </div>
+        <div class="project-stream">
+          {latestProjects.map((entry) => (
+            <ProjectCard
+              href={getEntryPath("projects", lang, entry)}
+              title={entry.data.title}
+              summary={entry.data.summary}
+              status={entry.data.status}
+              stack={entry.data.stack}
+              publishedAt={entry.data.publishedAt}
+              lang={lang}
               cover={entry.data.cover}
               coverAlt={entry.data.coverAlt}
+              repoUrl={entry.data.repoUrl}
+              demoUrl={entry.data.demoUrl}
               variant="compact"
             />
           ))}
         </div>
-      </div>
-    )}
-  </Container>
-</section>
+      </section>
+    </main>
+
+    <aside class="widget-rail">
+      <section class="widget-card">
+        <p class="eyebrow">{copy.home.nowTitle}</p>
+        <h2>{copy.home.focusTitle}</h2>
+        <div class="widget-list">
+          {copy.home.nowItems.map((item) => (
+            <div>
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section class="widget-card">
+        <p class="eyebrow">Quick Links</p>
+        <div class="quick-links">
+          <a href={GITHUB_URL} target="_blank" rel="noreferrer">{copy.labels.github}</a>
+          <a href={BILIBILI_URL} target="_blank" rel="noreferrer">{copy.labels.bilibili}</a>
+          <a href={getFriendsPath(lang)}>{copy.nav.friends}</a>
+        </div>
+      </section>
+
+      <section class="widget-card">
+        <p class="eyebrow">{copy.nav.guestbook}</p>
+        <h2>{copy.nav.guestbook}</h2>
+        <p>{lang === "zh-CN" ? "留一句话，像在博客小屋门口放下一张纸条。" : "Leave a small note at the door of the blog cottage."}</p>
+        <a class="widget-cta" href={getGuestbookPath(lang)}>
+          {lang === "zh-CN" ? "去留言" : "Open guestbook"}
+        </a>
+      </section>
+
+      <section class="widget-card">
+        <p class="eyebrow">{copy.home.lifeTitle}</p>
+        <h2>{copy.home.lifeTeaserTitle}</h2>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <Badge compact>photo</Badge>
+          <Badge compact>training</Badge>
+          <Badge compact>reading</Badge>
+        </div>
+        <div class="life-mini-list">
+          {latestLife.map((entry) => (
+            <a href={getEntryPath("life", lang, entry)}>
+              <span>{entry.data.title}</span>
+            </a>
+          ))}
+        </div>
+      </section>
+    </aside>
+  </div>
+</Container>
+
+<script>
+  const gate = document.querySelector<HTMLElement>("[data-welcome-gate]");
+  const enterButton = document.querySelector<HTMLButtonElement>("[data-enter-site]");
+
+  enterButton?.addEventListener("click", () => {
+    gate?.classList.add("is-leaving");
+    window.setTimeout(() => {
+      gate?.remove();
+    }, 680);
+  });
+</script>

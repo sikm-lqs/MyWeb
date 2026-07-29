@@ -1,0 +1,24 @@
+---
+import Container from "../components/layout/Container.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="留言"
+  description="给 sikm 的博客小屋留下一张轻量纸条。"
+  lang="zh-CN"
+  currentPath="/guestbook"
+  translationHref="/en/guestbook"
+>
+  <section class="static-page">
+    <Container>
+      <div class="static-page-panel">
+        <p class="eyebrow">Guestbook</p>
+        <h1>留言墙会在这里长出来。</h1>
+        <p>
+          第一版会做成轻量纸条：访客留一句话，不强制登录，偏氛围，不做复杂社区功能。
+        </p>
+      </div>
+    </Container>
+  </section>
+</BaseLayout>

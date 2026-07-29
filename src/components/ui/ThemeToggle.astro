@@ -1,0 +1,28 @@
+<button class="theme-toggle" type="button" aria-label="Toggle color theme" data-theme-toggle>
+  <span class="theme-toggle-sun" aria-hidden="true">☀</span>
+  <span class="theme-toggle-moon" aria-hidden="true">☾</span>
+</button>
+
+<script>
+  const applyTheme = (theme: string) => {
+    document.documentElement.dataset.theme = theme;
+  };
+
+  const storedTheme = window.localStorage.getItem("theme");
+  const initialTheme =
+    storedTheme === "light" || storedTheme === "dark"
+      ? storedTheme
+      : window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+
+  applyTheme(initialTheme);
+
+  document.querySelectorAll<HTMLButtonElement>("[data-theme-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      window.localStorage.setItem("theme", nextTheme);
+      applyTheme(nextTheme);
+    });
+  });
+</script>

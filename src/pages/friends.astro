@@ -1,0 +1,24 @@
+---
+import Container from "../components/layout/Container.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="友链"
+  description="sikm 常看的站点、工具、博客和技术资源。"
+  lang="zh-CN"
+  currentPath="/friends"
+  translationHref="/en/friends"
+>
+  <section class="static-page">
+    <Container>
+      <div class="static-page-panel">
+        <p class="eyebrow">Links</p>
+        <h1>这里会整理我常看的技术资源。</h1>
+        <p>
+          友链页会更像资源书签：Agent / LLM 相关资料、工程工具、个人博客和设计参考会慢慢沉淀在这里。
+        </p>
+      </div>
+    </Container>
+  </section>
+</BaseLayout>

@@ -1,0 +1,24 @@
+---
+import Container from "../../components/layout/Container.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="Guestbook"
+  description="Leave a small note in sikm's blog cottage."
+  lang="en"
+  currentPath="/en/guestbook"
+  translationHref="/guestbook"
+>
+  <section class="static-page">
+    <Container>
+      <div class="static-page-panel">
+        <p class="eyebrow">Guestbook</p>
+        <h1>The guestbook will grow here.</h1>
+        <p>
+          The first version will stay lightweight: one short note from a visitor, no forced login, more atmosphere than community machinery.
+        </p>
+      </div>
+    </Container>
+  </section>
+</BaseLayout>
