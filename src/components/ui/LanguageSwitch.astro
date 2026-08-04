@@ -9,7 +9,7 @@ const { href, label } = Astro.props;
 
 <a
   href={href ?? "#"}
-  class="rounded-full border border-[rgba(216,202,186,0.72)] px-3 py-2 text-[var(--text-muted)] transition hover:border-[rgba(200,111,74,0.35)] hover:text-[var(--text-main)]"
+  class="rounded-full border border-[var(--border-paper)] px-3 py-2 text-[var(--text-muted)] transition hover:border-[color-mix(in_srgb,var(--accent)_35%,var(--border))] hover:text-[var(--text-main)]"
 >
   {label}
 </a>

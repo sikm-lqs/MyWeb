@@ -107,3 +107,30 @@ export function getFallbackTranslationPath(
 ) {
   return getCollectionPath(collection, targetLang);
 }
+
+/* 构建时字数统计 (自托管，无额外依赖)
+ * 读取源 MDX，剥离 frontmatter，统计汉字 + 英文单词
+ */
+import fs from 'node:fs/promises';
+import path from 'node:path';
+
+export async function computeWordCount(
+  collection: 'writing' | 'research' | 'life' | 'projects',
+  lang: SiteLang,
+  routeSlug: string
+): Promise<number> {
+  const langDir = lang === 'zh-CN' ? 'zh' : 'en';
+  const filePath = path.join(process.cwd(), `src/content/${collection}/${langDir}/${routeSlug}.mdx`);
+  try {
+    const raw = await fs.readFile(filePath, 'utf8');
+    const body = raw.replace(/^---[\s\S]*?---\s*/, '').trim();
+    if (lang === 'zh-CN') {
+      const hanzi = (body.match(/[\u4e00-\u9fff]/g) || []).length;
+      const latinWords = (body.match(/[a-zA-Z0-9]+/g) || []).length;
+      return hanzi + latinWords;
+    }
+    return (body.match(/\b\w+\b/g) || []).length;
+  } catch {
+    return 0;
+  }
+}

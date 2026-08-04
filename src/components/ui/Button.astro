@@ -15,9 +15,9 @@ const {
 
 const className =
   variant === "primary"
-    ? "inline-flex min-w-[6.75rem] items-center justify-center rounded-full bg-[var(--text-main)] px-[1.125rem] py-2.5 text-sm font-medium !text-[#fffdf8] transition hover:-translate-y-0.5 hover:bg-[#3b342e]"
-    : "inline-flex min-w-[6.75rem] items-center justify-center rounded-full border border-[rgba(216,202,186,0.85)] bg-white/70 px-[1.125rem] py-2.5 text-sm font-medium text-[var(--text-main)] transition hover:-translate-y-0.5 hover:border-[rgba(200,111,74,0.35)]";
-const style = variant === "primary" ? "color: #fffdf8;" : undefined;
+    ? "inline-flex min-w-[6.75rem] items-center justify-center rounded-full bg-[var(--text-main)] px-[1.125rem] py-2.5 text-sm font-medium text-[var(--text-on-primary)] transition hover:-translate-y-0.5 hover:bg-[var(--btn-primary-hover)]"
+    : "inline-flex min-w-[6.75rem] items-center justify-center rounded-full border border-[var(--border-paper)] bg-[color-mix(in_srgb,var(--surface)_70%,transparent)] px-[1.125rem] py-2.5 text-sm font-medium text-[var(--text-main)] transition hover:-translate-y-0.5 hover:border-[color-mix(in_srgb,var(--accent)_35%,var(--border))]";
+const style = undefined;
 ---
 
 <a class={className} style={style} href={href} target={target} rel={rel}>

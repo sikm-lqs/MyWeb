@@ -5,6 +5,7 @@ import { getCollectionPath } from "../../../i18n/utils";
 import {
   getEntryPath,
   getTranslatedEntry,
+  computeWordCount,
 } from "../../../lib/content/translations";
 
 export async function getStaticPaths() {
@@ -22,6 +23,7 @@ export async function getStaticPaths() {
 const { entry } = Astro.props;
 const { Content } = await render(entry);
 const translation = await getTranslatedEntry("projects", entry, "zh-CN");
+const wordCount = await computeWordCount("projects", "en", entry.data.routeSlug);
 ---
 
 <ProjectLayout
@@ -40,6 +42,7 @@ const translation = await getTranslatedEntry("projects", entry, "zh-CN");
   demoUrl={entry.data.demoUrl}
   caseStudyUrl={entry.data.caseStudyUrl}
   backHref={getCollectionPath("projects", "en")}
+  wordCount={wordCount}
 >
   <Content />
 </ProjectLayout>

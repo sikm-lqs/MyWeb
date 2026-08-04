@@ -22,6 +22,7 @@ interface Props {
   demoUrl?: string;
   caseStudyUrl?: string;
   backHref: string;
+  wordCount?: number | string;
 }
 
 const {
@@ -40,6 +41,7 @@ const {
   demoUrl,
   caseStudyUrl,
   backHref,
+  wordCount,
 } = Astro.props;
 
 const copy = ui[lang];
@@ -55,21 +57,19 @@ const copy = ui[lang];
   <section class="pb-20 pt-14">
     <Container>
       <div class="mx-auto max-w-5xl">
-        <Button href={backHref} variant="secondary">{copy.labels.backToList}</Button>
         <div class="mt-8 grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
           <div>
-            <div class="flex flex-wrap items-center gap-3 text-sm text-[var(--text-subtle)]">
-              <span>{formatDate(publishedAt, lang)}</span>
-              {updatedAt && (
-                <>
-                  <span>·</span>
-                  <span>
-                    {copy.labels.updatedAt} {formatDate(updatedAt, lang)}
-                  </span>
-                </>
-              )}
+            <!-- 项目页也支持面包屑 + emoji meta + 字数 -->
+            <div class="text-sm text-[var(--text-subtle)] mb-1">
+              <a href={lang === 'zh-CN' ? '/' : '/en'} class="hover:text-[var(--text-main)] transition-colors">{lang === 'zh-CN' ? '首页' : 'Home'}</a>
+              <span class="mx-1">›</span>
+              <a href={backHref} class="hover:text-[var(--text-main)] transition-colors">{lang === 'zh-CN' ? '项目' : 'Projects'}</a>
             </div>
-            <h1 class="mt-5 text-4xl font-semibold tracking-tight text-[var(--text-main)] sm:text-5xl">
+            <div class="flex flex-wrap items-center gap-4 text-sm text-[var(--text-subtle)]">
+              <span class="inline-flex items-center gap-1">📅 {formatDate(publishedAt, lang)}</span>
+              {wordCount && <span class="inline-flex items-center gap-1">📝 {wordCount} {lang === 'zh-CN' ? '字' : 'words'}</span>}
+            </div>
+            <h1 class="mt-5 text-3xl font-semibold tracking-tight text-[var(--text-main)] sm:text-4xl">
               {title}
             </h1>
             <p class="mt-5 text-lg leading-8 text-[var(--text-muted)]">{description}</p>
@@ -100,11 +100,11 @@ const copy = ui[lang];
             <img
               src={cover}
               alt={coverAlt}
-              class="rounded-[1.8rem] border border-[rgba(216,202,186,0.78)] bg-white shadow-[var(--shadow-soft)]"
+              class="rounded-[1.8rem] border border-[var(--border-paper)] bg-white shadow-[var(--shadow-soft)]"
             />
           )}
         </div>
-        <article class="rich-content mx-auto mt-12 max-w-3xl">
+        <article class="rich-content mx-auto mt-12 max-w-4xl">
           <slot />
         </article>
       </div>

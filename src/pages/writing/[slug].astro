@@ -7,6 +7,7 @@ import {
 import {
   getBlogEntryPath,
   getTranslatedBlogEntry,
+  computeWordCount,
   type BlogEntry,
   type BlogSourceCollection,
 } from "../../lib/content/translations";
@@ -40,6 +41,7 @@ const { entry, sourceCollection } = Astro.props as {
 };
 const { Content } = await render(entry);
 const translation = await getTranslatedBlogEntry(sourceCollection, entry, "en");
+const wordCount = await computeWordCount(sourceCollection, "zh-CN", entry.data.routeSlug);
 ---
 
 <ArticleLayout
@@ -56,6 +58,7 @@ const translation = await getTranslatedBlogEntry(sourceCollection, entry, "en");
   cover={entry.data.cover}
   coverAlt={entry.data.coverAlt}
   backHref={getCollectionPath("writing", "zh-CN")}
+  wordCount={wordCount}
 >
   <Content />
 </ArticleLayout>

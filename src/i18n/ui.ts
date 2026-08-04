@@ -231,7 +231,7 @@ export const ui: Record<SiteLang, Dictionary> = {
       contactBody:
         "GitHub、邮箱与公开渠道将在正式上线前补充。当前版本先完成信息结构、内容系统和多语言框架。",
     },
-    footer: "Built with Astro, MDX, Tailwind and a bias toward clear thinking.",
+    footer: "",
     currentFocus: ["LLM", "Agent", "RL"],
   },
   en: {
@@ -372,7 +372,7 @@ export const ui: Record<SiteLang, Dictionary> = {
       contactBody:
         "GitHub, email, and public contact channels will be added before the public launch. This iteration focuses on structure, content workflows, and bilingual delivery.",
     },
-    footer: "Built with Astro, MDX, Tailwind, and a preference for calm engineering.",
+    footer: "",
     currentFocus: ["LLM", "Agent", "RL"],
   },
 };

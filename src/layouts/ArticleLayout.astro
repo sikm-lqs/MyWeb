@@ -2,7 +2,6 @@
 import BaseLayout from "./BaseLayout.astro";
 import Container from "../components/layout/Container.astro";
 import Badge from "../components/ui/Badge.astro";
-import Button from "../components/ui/Button.astro";
 import { ui } from "../i18n/ui";
 import {
   formatDate,
@@ -24,6 +23,7 @@ interface Props {
   cover?: string;
   coverAlt?: string;
   backHref: string;
+  wordCount?: number | string;
 }
 
 const {
@@ -39,6 +39,7 @@ const {
   cover,
   coverAlt = "",
   backHref,
+  wordCount,
 } = Astro.props;
 
 const copy = ui[lang];
@@ -53,26 +54,28 @@ const copy = ui[lang];
 >
   <section class="pb-20 pt-14">
     <Container>
-      <div class="mx-auto max-w-3xl">
-        <Button href={backHref} variant="secondary">{copy.labels.backToList}</Button>
-        <div class="mt-6 flex flex-wrap items-center gap-3 text-sm text-[var(--text-subtle)]">
-          <span>{formatDate(publishedAt, lang)}</span>
-          {updatedAt && (
-            <>
-              <span>·</span>
-              <span>
-                {copy.labels.updatedAt} {formatDate(updatedAt, lang)}
-              </span>
-            </>
-          )}
+      <div class="mx-auto max-w-4xl">
+        <!-- 小型面包屑：首页 > 博客 (支持中英) -->
+        <div class="text-sm text-[var(--text-subtle)] mb-2">
+          <a href={lang === 'zh-CN' ? '/' : '/en'} class="hover:text-[var(--text-main)] transition-colors"> {lang === 'zh-CN' ? '首页' : 'Home'} </a>
+          <span class="mx-1">›</span>
+          <a href={backHref} class="hover:text-[var(--text-main)] transition-colors"> {lang === 'zh-CN' ? '博客' : 'Blog'} </a>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-[var(--text-subtle)]">
+          <span class="inline-flex items-center gap-1">📅 {formatDate(publishedAt, lang)}</span>
           {readTime && (
-            <>
-              <span>·</span>
-              <span>{readTime}</span>
-            </>
+            <span class="inline-flex items-center gap-1">⏱ {readTime}</span>
+          )}
+          {wordCount && (
+            <span class="inline-flex items-center gap-1">📝 {wordCount} {lang === 'zh-CN' ? '字' : 'words'}</span>
+          )}
+          {updatedAt && (
+            <span class="inline-flex items-center gap-1 text-[var(--text-subtle)]">· {copy.labels.updatedAt} {formatDate(updatedAt, lang)}</span>
           )}
         </div>
-        <h1 class="mt-5 text-4xl font-semibold tracking-tight text-[var(--text-main)] sm:text-5xl">
+
+        <h1 class="mt-5 text-3xl font-semibold tracking-tight text-[var(--text-main)] sm:text-4xl">
           {title}
         </h1>
         <p class="mt-5 text-lg leading-8 text-[var(--text-muted)]">{description}</p>
@@ -85,7 +88,7 @@ const copy = ui[lang];
           <img
             src={cover}
             alt={coverAlt}
-            class="mt-8 rounded-[1.6rem] border border-[rgba(216,202,186,0.78)] bg-white shadow-[var(--shadow-soft)]"
+            class="mt-8 rounded-[1.6rem] border border-[var(--border-paper)] bg-white shadow-[var(--shadow-soft)]"
           />
         )}
         <article class="rich-content mt-10">
