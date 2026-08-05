@@ -1,14 +1,45 @@
 @import 'katex/dist/katex.min.css';
 @import "tailwindcss";
 
-/* ========== Self-hosted Chinese fonts (MiSans / Noto Sans SC) ========== */
-/* Place downloaded .woff2 files in public/fonts/ */
-/* MiSans: download from Xiaomi HyperOS font page (https://hyperos.mi.com/font/) */
-/* Noto Sans SC: https://fonts.google.com/specimen/Noto+Sans+SC -> download or use noto repo */
+/* ========== Self-hosted fonts ========== */
+/* MiSans + Noto Sans SC kept for Chinese readability */
+/* For editorial "高级杂志感" (Anthropic style): added serif */
 
-/* Self-hosted fonts - Noto Sans SC downloaded via Google Fonts (partial ranges)
-   MiSans: you need to download manually from Xiaomi (see below) */
+/* Serif stack for "高级杂志感" (Anthropic style) */
+/* EB Garamond (English) + Noto Serif SC (Chinese) for editorial feel */
+/* Files placed in public/fonts/ as .ttf (from Google Fonts download) */
 
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('/fonts/EBGaramond-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'EB Garamond';
+  src: url('/fonts/EBGaramond-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Noto Serif SC';
+  src: url('/fonts/NotoSerifSC-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Noto Serif SC';
+  src: url('/fonts/NotoSerifSC-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Original Chinese sans (kept for fallback and body where needed) */
 @font-face {
   font-family: 'Noto Sans SC';
   src: url('/fonts/NotoSansSC-Regular.woff2') format('woff2');
@@ -24,9 +55,6 @@
   font-display: swap;
 }
 
-/* MiSans placeholder - add your downloaded files here for priority Chinese font
-   Download: https://hyperos.mi.com/font/  (or search "MiSans font download")
-   Then place MiSans-Regular.woff2 / MiSans-Bold.woff2 in public/fonts/ */
 @font-face {
   font-family: 'MiSans';
   src: url('/fonts/MiSans-Regular.woff2') format('woff2');
@@ -42,54 +70,55 @@
   font-display: swap;
 }
 
-/* Color system variables - centralized to avoid hardcodes */
+/* Color system - Warm editorial / magazine style (Anthropic reference) */
+/* Removed teal accent. Using warm neutrals + black for actions. */
 :root,
 :root[data-theme="light"] {
   color-scheme: light;
-  --background: #f7f8fa;
-  --surface: #ffffff;
-  --surface-soft: #f1f5f9;
-  --surface-muted: #e8eef5;
-  --surface-raised: #ffffff;
-  --text-main: #111827;
-  --text-muted: #5f6b7a;
-  --text-subtle: #8a95a3;
-  --border: #e3e8ef;
-  --border-strong: #cad3df;
-  --border-paper: rgba(216, 202, 186, 0.78);
-  --accent: #10a37f;
-  --accent-soft: #d9f5ec;
-  --accent-muted: #08785f;
-  --header-bg: rgba(255, 255, 255, 0.82);
-  --shadow-soft: 0 18px 48px rgba(15, 23, 42, 0.08);
-  --shadow-poster: 0 34px 100px rgba(15, 23, 42, 0.14);
-  --grain: rgba(30, 41, 59, 0.032);
-  --text-on-primary: #fffdf8;
-  --btn-primary-hover: #3b342e;
+  --background: #f4efe6;
+  --surface: #eae3d5;
+  --surface-soft: #f0e9df;
+  --surface-muted: #e6dccf;
+  --surface-raised: #f5f0e8;
+  --text-main: #1f1a14;
+  --text-muted: #5c5246;
+  --text-subtle: #8a7f6f;
+  --border: #d4c9b8;
+  --border-strong: #b8a88f;
+  --border-paper: #d4c9b8;
+  --accent: #1f1a14;
+  --accent-soft: #e6dccf;
+  --accent-muted: #5c5246;
+  --header-bg: rgba(244, 239, 230, 0.92);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-poster: 0 10px 30px rgba(0, 0, 0, 0.1);
+  --grain: rgba(0, 0, 0, 0.012);
+  --text-on-primary: #f4efe6;
+  --btn-primary-hover: #111;
 }
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --background: #0f1115;
-  --surface: #171a21;
-  --surface-soft: #1f2430;
-  --surface-muted: #293140;
-  --surface-raised: #1a1f29;
-  --text-main: #f4f7fb;
-  --text-muted: #aab4c2;
-  --text-subtle: #7e8998;
-  --border: #2b3442;
-  --border-strong: #3b4658;
-  --border-paper: rgba(90, 80, 70, 0.6);
-  --accent: #7ee0c3;
-  --accent-soft: #173c34;
-  --accent-muted: #8fead0;
-  --header-bg: rgba(15, 17, 21, 0.86);
-  --shadow-soft: 0 22px 68px rgba(0, 0, 0, 0.32);
-  --shadow-poster: 0 42px 120px rgba(0, 0, 0, 0.48);
-  --grain: rgba(226, 232, 240, 0.03);
-  --text-on-primary: #fffdf8;
-  --btn-primary-hover: #4a4035;
+  --background: #1a1814;
+  --surface: #25221d;
+  --surface-soft: #2f2a24;
+  --surface-muted: #3a342d;
+  --surface-raised: #25221d;
+  --text-main: #f0e9df;
+  --text-muted: #b8a88f;
+  --text-subtle: #8a7f6f;
+  --border: #3a342d;
+  --border-strong: #4a4238;
+  --border-paper: #3a342d;
+  --accent: #f0e9df;
+  --accent-soft: #2f2a24;
+  --accent-muted: #b8a88f;
+  --header-bg: rgba(26, 24, 20, 0.92);
+  --shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-poster: 0 10px 30px rgba(0, 0, 0, 0.3);
+  --grain: rgba(255, 255, 255, 0.015);
+  --text-on-primary: #1a1814;
+  --btn-primary-hover: #f0e9df;
 }
 
 html {
@@ -99,24 +128,16 @@ html {
 body {
   margin: 0;
   min-width: 320px;
-  background:
-    radial-gradient(circle at 16% 8%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 28rem),
-    radial-gradient(circle at 88% 12%, rgba(37, 99, 235, 0.09), transparent 31rem),
-    linear-gradient(180deg, var(--surface-soft) 0%, var(--background) 34%, var(--background) 100%);
+  background: var(--background);
   color: var(--text-main);
   font-family:
+    "EB Garamond",
+    "Noto Serif SC",
+    Georgia,
     "MiSans",
     "Noto Sans SC",
-    "Inter",
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "PingFang SC",
-    "Microsoft YaHei",
-    sans-serif;
-  line-height: 1.7;
+    serif;
+  line-height: 1.65;
 }
 
 body::before {
@@ -129,7 +150,7 @@ body::before {
     linear-gradient(180deg, var(--grain) 1px, transparent 1px);
   background-size: 44px 44px;
   content: "";
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.78), transparent 72%);
+  opacity: 0.5;
 }
 
 a {
@@ -171,9 +192,8 @@ img {
 .site-brand {
   color: var(--text-main);
   font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
 .site-nav {
@@ -239,15 +259,10 @@ img {
 }
 
 .eyebrow {
-  color: var(--accent-muted);
-  font-family:
-    "JetBrains Mono",
-    "SFMono-Regular",
-    Consolas,
-    monospace;
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  color: var(--text-subtle);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
@@ -280,12 +295,9 @@ img {
   min-height: min(42rem, calc(100vh - 5rem));
   place-items: center;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  border-radius: 1.8rem;
-  background:
-    radial-gradient(circle at center 30%, color-mix(in srgb, var(--surface) 72%, transparent), transparent 16rem),
-    linear-gradient(145deg, color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--surface-soft) 82%, transparent));
-  box-shadow: var(--shadow-poster);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+  border-radius: 1rem;
+  background: var(--surface);
 }
 
 .welcome-lines,
@@ -485,15 +497,15 @@ img {
 }
 
 .welcome-actions button {
-  border: 1px solid var(--text-main);
-  background: var(--text-main);
-  color: var(--surface);
+  background: #111;
+  color: #f4efe6;
+  border: none;
 }
 
 .welcome-actions a {
-  border: 1px solid color-mix(in srgb, var(--border-strong) 78%, transparent);
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
-  color: var(--text-main);
+  border: 1px solid #d4c9b8;
+  background: transparent;
+  color: #1f1a14;
 }
 
 .welcome-actions button:hover,
@@ -520,11 +532,9 @@ img {
 .profile-card,
 .side-nav,
 .widget-card {
-  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
-  box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  border-radius: 0.75rem;
+  background: var(--surface);
 }
 
 .profile-card {
@@ -545,8 +555,9 @@ img {
 .profile-card h2 {
   margin: 0.85rem 0 0;
   font-size: 1.45rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.2;
+  font-family: Georgia, "EB Garamond", "Noto Serif SC", serif;
 }
 
 .profile-card p {
@@ -572,11 +583,11 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--border-strong) 76%, transparent);
+  border: 1px solid #d4c9b8;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  background: transparent;
   padding: 0.44rem 0.78rem;
-  color: var(--text-main);
+  color: #1f1a14;
   font-size: 0.84rem;
   transition:
     border-color 180ms ease,
@@ -607,7 +618,7 @@ img {
 }
 
 .side-nav a:hover {
-  background: color-mix(in srgb, var(--surface-muted) 52%, transparent);
+  background: color-mix(in srgb, var(--surface-soft) 70%, transparent);
   color: var(--text-main);
 }
 
@@ -617,11 +628,10 @@ img {
 }
 
 .feed-section {
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
   border-radius: 1rem;
-  background: color-mix(in srgb, var(--surface-raised) 88%, transparent);
+  background: var(--surface);
   padding: clamp(1rem, 2.2vw, 1.35rem);
-  box-shadow: var(--shadow-soft);
 }
 
 .theme-shelf {
@@ -637,10 +647,9 @@ img {
   grid-template-columns: 0.5rem 1fr;
   gap: 0.85rem;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
-  border-radius: 0.95rem;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface) 95%, transparent), color-mix(in srgb, var(--surface-soft) 72%, transparent));
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 0.75rem;
+  background: var(--surface);
   padding: 1rem;
   transition:
     border-color 180ms ease,
@@ -658,14 +667,15 @@ img {
   inset: auto 1rem 0 1.55rem;
   height: 0.28rem;
   border-radius: 999px 999px 0 0;
-  background: color-mix(in srgb, var(--accent) calc(16% + var(--book-index) * 2%), transparent);
+  background: #1f1a14;
+  opacity: 0.15;
   content: "";
 }
 
 .theme-book-spine {
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 52%, #2563eb));
-  opacity: 0.72;
+  background: #1f1a14;
+  opacity: 0.15;
 }
 
 .theme-book p {
@@ -682,9 +692,10 @@ img {
 .theme-book h3 {
   margin: 0.55rem 0 0;
   font-size: 1.08rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.25;
+  font-family: Georgia, "EB Garamond", "Noto Serif SC", serif;
 }
 
 .theme-book span {
@@ -710,13 +721,13 @@ img {
 }
 
 .content-card {
-  border: 1px solid color-mix(in srgb, var(--border) 86%, transparent);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: var(--surface);
 }
 
 .content-card-media {
-  border-bottom: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
-  background: var(--surface-soft);
+  border-bottom: 1px solid #d4c9b8;
+  background: #f0e9df;
 }
 
 .content-card-links {
@@ -724,17 +735,17 @@ img {
 }
 
 .badge {
-  border: 1px solid color-mix(in srgb, var(--border-strong) 70%, transparent);
+  border: 1px solid #d4c9b8;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-soft) 76%, transparent);
+  background: var(--surface);
   color: var(--text-muted);
   font-weight: 600;
 }
 
 .badge-accent {
-  border-color: color-mix(in srgb, var(--accent) 32%, var(--border));
-  background: color-mix(in srgb, var(--accent-soft) 72%, transparent);
-  color: var(--accent-muted);
+  border-color: #d4c9b8;
+  background: var(--surface);
+  color: var(--text-muted);
 }
 
 .widget-card {
@@ -744,8 +755,9 @@ img {
 .widget-card h2 {
   margin: 0.45rem 0 0;
   font-size: 1.22rem;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.25;
+  font-family: Georgia, "EB Garamond", "Noto Serif SC", serif;
 }
 
 .widget-card p:not(.eyebrow) {
@@ -799,19 +811,19 @@ img {
 
 .static-page-panel {
   max-width: 44rem;
-  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
-  border-radius: 1.35rem;
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  border-radius: 0.75rem;
+  background: var(--surface);
   padding: clamp(1.35rem, 4vw, 2.25rem);
-  box-shadow: var(--shadow-soft);
 }
 
 .static-page-panel h1 {
   margin: 0.6rem 0 0;
   font-size: clamp(1.75rem, 4.5vw, 2.75rem);
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0;
   line-height: 1.12;
+  font-family: Georgia, "EB Garamond", "Noto Serif SC", serif;
 }
 
 .static-page-panel p:not(.eyebrow) {
@@ -830,9 +842,11 @@ img {
   margin-top: 0;
 }
 
+.rich-content h1,
 .rich-content h2,
 .rich-content h3,
 .rich-content h4 {
+  font-family: "EB Garamond", "Noto Serif SC", Georgia, serif;
   margin-top: 2.2rem;
   margin-bottom: 0.9rem;
   font-weight: 600;
@@ -859,7 +873,7 @@ img {
 }
 
 .rich-content blockquote {
-  border-left: 3px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-left: 3px solid #d4c9b8;
   padding-left: 1rem;
   color: var(--text-muted);
 }
@@ -891,10 +905,9 @@ img {
 }
 
 .rich-content img {
-  border: 1px solid color-mix(in srgb, var(--border) 75%, transparent);
-  border-radius: 1.25rem;
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  border: 1px solid #d4c9b8;
+  border-radius: 0.75rem;
+  background: #f4efe6;
 }
 
 .rich-content table {
@@ -926,14 +939,14 @@ img {
 }
 
 .rich-content a {
-  color: var(--accent);
+  color: #1f1a14;
   text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  text-decoration-color: #d4c9b8;
   text-underline-offset: 0.22em;
 }
 
 .rich-content a:hover {
-  text-decoration-color: var(--accent);
+  text-decoration-color: #1f1a14;
 }
 
 @media (width < 640px) {

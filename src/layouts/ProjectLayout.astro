@@ -65,11 +65,11 @@ const copy = ui[lang];
               <span class="mx-1">›</span>
               <a href={backHref} class="hover:text-[var(--text-main)] transition-colors">{lang === 'zh-CN' ? '项目' : 'Projects'}</a>
             </div>
-            <div class="flex flex-wrap items-center gap-4 text-sm text-[var(--text-subtle)]">
-              <span class="inline-flex items-center gap-1">📅 {formatDate(publishedAt, lang)}</span>
-              {wordCount && <span class="inline-flex items-center gap-1">📝 {wordCount} {lang === 'zh-CN' ? '字' : 'words'}</span>}
+            <div class="flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.06em] text-[var(--text-subtle)]">
+              <span>{formatDate(publishedAt, lang)}</span>
+              {wordCount && <span>· {wordCount} {lang === 'zh-CN' ? '字' : 'words'}</span>}
             </div>
-            <h1 class="mt-5 text-3xl font-semibold tracking-tight text-[var(--text-main)] sm:text-4xl">
+            <h1 class="mt-5 text-3xl font-semibold tracking-tight text-[var(--text-main)] sm:text-4xl font-serif">
               {title}
             </h1>
             <p class="mt-5 text-lg leading-8 text-[var(--text-muted)]">{description}</p>
@@ -100,7 +100,7 @@ const copy = ui[lang];
             <img
               src={cover}
               alt={coverAlt}
-              class="rounded-[1.8rem] border border-[var(--border-paper)] bg-white shadow-[var(--shadow-soft)]"
+              class="rounded-[1rem] border border-[#d4c9b8] bg-[#f4efe6]"
             />
           )}
         </div>

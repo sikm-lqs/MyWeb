@@ -53,29 +53,23 @@ const themeHrefs = [
 ];
 ---
 
-<div class="welcome-gate" data-welcome-gate>
-  <div class="welcome-poster">
-    <div class="welcome-lines" aria-hidden="true"></div>
-    <div class="welcome-symbol symbol-book" aria-hidden="true"></div>
-    <div class="welcome-symbol symbol-mac" aria-hidden="true"></div>
-    <div class="welcome-symbol symbol-agent" aria-hidden="true"></div>
-    <div class="welcome-symbol symbol-training" aria-hidden="true"></div>
+  <div class="welcome-gate" data-welcome-gate>
+    <div class="welcome-poster">
+      <div class="welcome-avatar">
+        <img src={PROFILE_AVATAR_SRC} alt="sikm avatar" loading="eager" />
+      </div>
 
-    <div class="welcome-avatar">
-      <img src={PROFILE_AVATAR_SRC} alt="sikm avatar" loading="eager" />
-    </div>
-
-    <div class="welcome-copy">
-      <p class="eyebrow">{copy.hero.eyebrow}</p>
-      <h1>{copy.home.welcomeTitle}</h1>
-      <p>{copy.home.welcomeDescription}</p>
-      <div class="welcome-actions">
-        <button type="button" data-enter-site>{copy.home.welcomeCta}</button>
-        <a href={getCollectionPath("writing", lang)}>{copy.hero.primaryCta}</a>
+      <div class="welcome-copy">
+        <p class="eyebrow">{copy.hero.eyebrow}</p>
+        <h1 class="font-serif">{copy.home.welcomeTitle}</h1>
+        <p>{copy.home.welcomeDescription}</p>
+        <div class="welcome-actions">
+          <button type="button" data-enter-site>{copy.home.welcomeCta}</button>
+          <a href={getCollectionPath("writing", lang)}>{copy.hero.primaryCta}</a>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
 <Container>
   <div class="home-dashboard">
