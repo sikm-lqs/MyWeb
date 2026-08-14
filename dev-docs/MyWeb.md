@@ -1,6 +1,6 @@
 # MyWeb 项目沉淀文档
 
-更新时间：2026-07-29
+更新时间：2026-08-14
 
 本文档记录 MyWeb 当前的产品定位、技术方案、视觉基线、页面结构和后续规划。它是后续继续开发时的基准文档。
 
@@ -16,7 +16,7 @@ MyWeb 是 sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、�
 
 一句话定位：
 
-> 一个清爽现代的个人研究小站：主线是 Agent / LLM / 工程实践，辅线是生活记录和个人表达。
+> 一个暖纸面、衬线排版、克制而可长期维护的个人研究小站：主线是 Agent / LLM / 工程实践，辅线是生活记录和个人表达。
 
 核心目标：
 
@@ -32,7 +32,7 @@ MyWeb 是 sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、�
 当前版本采用：
 
 ```text
-Welcome Gate + 三栏博客首页 + 清爽现代视觉系统
+Welcome Gate + 三栏博客首页 + 暖纸面 editorial 视觉系统
 ```
 
 访问首页时：
@@ -249,62 +249,67 @@ A long-term place for notes on Agent, LLMs, engineering practice, and small frag
 
 ## 5.1 当前视觉方向
 
-当前已摒弃早期暖白 / 棕色 / 复古博客风，改为：
+当前代码中的视觉系统以 `src/styles/global.css` 为准。它已经从早期“清爽现代 / OpenAI-Codex 气质”的蓝绿 accent 方案，收敛到更明确的：
 
 ```text
-清爽
-现代
+暖纸面
+衬线排版
+editorial / magazine
 克制
-产品化
-研究空间
-OpenAI / Codex 气质参考
+内容优先
+个人研究空间
 ```
 
 设计原则：
 
 * 内容优先
-* 大方留白
-* 卡片清晰但不厚重
-* 少量强调色
+* 大方留白，但首页保持可扫描的信息密度
+* 卡片清晰但不厚重，避免过度玻璃拟态和强阴影
+* 少量强调色，以黑色动作按钮、暖色边框和文本层级为主
 * 浅色 / 深色都完整可读
-* 不使用强烈光效、粒子背景、霓虹风
-* 不使用过度可爱化的博客装饰
+* 不使用强烈光效、粒子背景、霓虹风、纯装饰渐变
+* 不使用营销型 landing page 构图
+* 保留“博客小屋”的个人气质，但不走过度可爱化装饰
 
 ## 5.2 色彩基线
 
 浅色模式：
 
 ```css
---background: #f7f8fa;
---surface: #ffffff;
---surface-soft: #f1f5f9;
---surface-muted: #e8eef5;
---text-main: #111827;
---text-muted: #5f6b7a;
---text-subtle: #8a95a3;
---border: #e3e8ef;
---border-strong: #cad3df;
---accent: #10a37f;
---accent-soft: #d9f5ec;
---accent-muted: #08785f;
+--background: #f4efe6;
+--surface: #eae3d5;
+--surface-soft: #f0e9df;
+--surface-muted: #e6dccf;
+--surface-raised: #f5f0e8;
+--text-main: #1f1a14;
+--text-muted: #5c5246;
+--text-subtle: #8a7f6f;
+--border: #d4c9b8;
+--border-strong: #b8a88f;
+--accent: #1f1a14;
+--accent-soft: #e6dccf;
+--accent-muted: #5c5246;
 ```
 
 深色模式：
 
 ```css
---background: #0f1115;
---surface: #171a21;
---surface-soft: #1f2430;
---surface-muted: #293140;
---text-main: #f4f7fb;
---text-muted: #aab4c2;
---text-subtle: #7e8998;
---border: #2b3442;
---border-strong: #3b4658;
---accent: #7ee0c3;
---accent-soft: #173c34;
---accent-muted: #8fead0;
+--background: #1a1814;
+--surface: #25221d;
+--surface-soft: #2f2a24;
+--surface-muted: #3a342d;
+--surface-raised: #25221d;
+--text-main: #f0e9df;
+--text-muted: #b8a88f;
+--text-subtle: #8a7f6f;
+--border: #3a342d;
+--border-strong: #4a4238;
+--accent: #f0e9df;
+--accent-soft: #2f2a24;
+--accent-muted: #b8a88f;
 ```
+
+浅色和深色都通过 `--header-bg`、`--shadow-soft`、`--shadow-poster`、`--grain` 等变量补充 header、hover 和纸面纹理表现。
 
 ## 5.3 主题切换
 
@@ -317,20 +322,16 @@ OpenAI / Codex 气质参考
 
 ## 5.4 字体
 
-当前使用现代 sans-serif 栈：
+当前使用 editorial 衬线栈：
 
 ```css
 font-family:
-  "OpenAI Sans",
-  "Inter",
-  ui-sans-serif,
-  system-ui,
-  -apple-system,
-  BlinkMacSystemFont,
-  "Segoe UI",
-  "PingFang SC",
-  "Microsoft YaHei",
-  sans-serif;
+  "EB Garamond",
+  "Noto Serif SC",
+  Georgia,
+  "MiSans",
+  "Noto Sans SC",
+  serif;
 ```
 
 代码字体：
@@ -425,7 +426,7 @@ public/images/
 
 * Welcome Gate
 * 三栏博客首页
-* 清爽现代视觉系统
+* 暖纸面 editorial 视觉系统
 * 显式浅色 / 深色主题切换
 * 主题书架整卡可点击
 * Guestbook / Links 占位页

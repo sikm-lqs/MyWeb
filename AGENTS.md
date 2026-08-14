@@ -50,6 +50,7 @@ Implemented:
 - Explicit light/dark theme switching
 - Home page data queries for latest projects, latest blog entries, and life notes
 - Three-column home layout with profile/navigation, theme shelf/latest content, and side widgets
+- Warm editorial visual system based on paper tones, serif typography, soft borders, and restrained cards
 - Placeholder avatar and cover images
 
 Known next priorities:
@@ -137,6 +138,17 @@ Entries are sorted by `publishedAt` descending.
 - Consider migrating or renaming `src/content/research` into a more general blog source later.
 - Add redirects from old `/research/*` paths before public launch if those URLs were ever shared.
 
+## Visual Baseline
+
+The implemented UI follows the tokens and component styles in `src/styles/global.css`.
+
+- Light mode uses warm paper tones such as `#f4efe6`, `#eae3d5`, and `#d4c9b8`.
+- Dark mode uses warm near-black surfaces and muted paper borders.
+- Typography is editorial: `EB Garamond` + `Noto Serif SC`, with sans-serif Chinese fonts kept as fallback.
+- The home page is a Welcome Gate plus a three-column content dashboard.
+- Use borders, spacing, cover images, badges, and subtle hover movement for hierarchy.
+- Avoid strong gradients, neon effects, particle backgrounds, or marketing-page composition.
+
 ## Agent Guidelines
 
 - Read the relevant source files before editing.
@@ -146,4 +158,4 @@ Entries are sorted by `publishedAt` descending.
 - For bilingual content, keep the same `translationKey` across languages.
 - Do not commit secrets, `.env` files, build output, or large uncompressed images.
 - If changing content schemas, route behavior, homepage data rules, or publishing workflow, update `README.md`, `dev-docs/内容发布流程.md`, `CLAUDE.md`, and this file together.
-- Keep the UI restrained and content-focused: this is a personal writing and portfolio site, not a marketing landing page.
+- Keep the UI warm, restrained, editorial, and content-focused: this is a personal writing and portfolio site, not a marketing landing page.

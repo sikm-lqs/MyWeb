@@ -43,7 +43,7 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - `/` 中文路由与 `/en` 英文路由
 - 基于 `translationKey` 的双语内容配对与语言切换回退
 - 首页最新项目、最新博客和生活记录取数
-- 占位头像、封面图和基础视觉系统
+- 占位头像、封面图和暖纸面 editorial 视觉系统
 - `npm run build` 曾构建通过
 
 当前主要待办：
@@ -124,6 +124,17 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - 后续可把 `src/content/research` 逐步迁移或重命名为更通用的 blog 子目录
 - 为旧 `/research/*` 链接补充重定向策略，避免正式上线后断链
 
+## 视觉基线
+
+当前实现以 `src/styles/global.css` 为准，采用暖纸面、衬线字体、轻网格肌理和低饱和边框的 editorial / magazine 风格：
+
+- 浅色主题基于 `#f4efe6`、`#eae3d5`、`#d4c9b8` 等暖色纸面变量
+- 深色主题是暖黑和低对比纸面边框，不走纯黑高亮或霓虹风
+- 标题和正文主要使用 `EB Garamond` + `Noto Serif SC`
+- 首页是 Welcome Gate + 三栏内容 dashboard，不是营销型 landing page
+- 卡片通过边框、留白、封面图和 hover 微位移建立层级
+- 新增 UI 优先复用现有 `ArticleCard`、`ProjectCard`、`Badge`、`Button`、`SectionTitle`、`BaseLayout`、`ArticleLayout` 和 `ProjectLayout`
+
 ## 开发约定
 
 - 修改前先阅读相关页面、组件和 `src/content.config.ts`
@@ -132,4 +143,4 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - 中英文版本的 `translationKey` 必须一致；允许先发布单语内容
 - 不要提交 `.env`、密钥、构建产物或大型未压缩图片
 - 改动内容 schema、首页取数、路由规则时，同步更新 `README.md`、`dev-docs/内容发布流程.md` 以及本文件
-- 变更 UI 时保持现有静态内容站风格：清晰、克制、面向阅读和作品展示
+- 变更 UI 时保持现有静态内容站风格：暖纸面、衬线排版、克制、面向阅读和作品展示
