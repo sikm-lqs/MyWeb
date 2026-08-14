@@ -43,7 +43,7 @@ const hiddenStackCount = Math.max(stack.length - visibleStack.length, 0);
 <article
   class:list={[
     "content-card animated-card group h-full overflow-hidden",
-    horizontal ? "grid md:grid-cols-[minmax(13rem,0.42fr)_minmax(0,1fr)]" : "flex flex-col",
+    horizontal ? "grid md:grid-cols-[minmax(15rem,0.46fr)_minmax(0,1fr)]" : "flex flex-col",
     compact ? "rounded-[1.15rem]" : "rounded-[1.25rem]",
   ]}
 >
@@ -86,7 +86,7 @@ const hiddenStackCount = Math.max(stack.length - visibleStack.length, 0);
           compact ? "text-base" : "text-lg sm:text-xl",
         ]}
       >
-        <a href={href} class="transition-colors group-hover:text-[var(--accent-muted)]">
+        <a href={href} class="content-card-title-link">
           {title}
         </a>
       </h3>

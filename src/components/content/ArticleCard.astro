@@ -37,7 +37,11 @@ const hiddenTagCount = Math.max(tags.length - visibleTags.length, 0);
 <article
   class:list={[
     "content-card animated-card group h-full overflow-hidden",
-    horizontal ? "grid md:grid-cols-[minmax(13rem,0.42fr)_minmax(0,1fr)]" : "flex flex-col",
+    featured
+      ? "content-card-featured grid md:grid-cols-[minmax(19rem,0.62fr)_minmax(0,1fr)]"
+      : horizontal
+        ? "grid md:grid-cols-[minmax(15rem,0.46fr)_minmax(0,1fr)]"
+        : "flex flex-col",
     featured ? "rounded-[1.45rem]" : variant === "compact" ? "rounded-[1.1rem]" : "rounded-[1.25rem]",
   ]}
 >
@@ -55,7 +59,7 @@ const hiddenTagCount = Math.max(tags.length - visibleTags.length, 0);
         alt={coverAlt}
         class:list={[
           "w-full object-cover",
-          horizontal ? "h-44 md:h-full md:min-h-[11.5rem]" : "h-32 sm:h-36",
+          featured ? "h-52 md:h-full md:min-h-[15rem]" : horizontal ? "h-44 md:h-full md:min-h-[11.5rem]" : "h-32 sm:h-36",
         ]}
         loading="lazy"
       />
@@ -93,7 +97,7 @@ const hiddenTagCount = Math.max(tags.length - visibleTags.length, 0);
               : "text-lg sm:text-xl [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden",
         ]}
       >
-        <a href={href} class="transition-colors group-hover:text-[var(--accent-muted)]">
+        <a href={href} class="content-card-title-link">
           {title}
         </a>
       </h3>
