@@ -1,5 +1,5 @@
 ---
-type Platform = "github" | "bilibili" | "xiaohongshu" | "wechat";
+type Platform = "github" | "bilibili" | "x" | "xiaohongshu" | "wechat";
 
 interface Props {
   href?: string;
@@ -7,14 +7,16 @@ interface Props {
   label: string;
   handle?: string;
   compact?: boolean;
+  iconOnly?: boolean;
 }
 
-const { href = "", platform, label, handle, compact = false } = Astro.props;
+const { href = "", platform, label, handle, compact = false, iconOnly = false } = Astro.props;
 const isAvailable = href.length > 0;
 
 const iconLabel: Record<Platform, string> = {
   github: "GitHub",
   bilibili: "Bilibili",
+  x: "X",
   xiaohongshu: "RED",
   wechat: "WX",
 };
@@ -48,6 +50,13 @@ const iconLabel: Record<Platform, string> = {
               d="m8 5 2.1 2.2M16 5l-2.1 2.2M6.7 8h10.6A2.7 2.7 0 0 1 20 10.7v5.6a2.7 2.7 0 0 1-2.7 2.7H6.7A2.7 2.7 0 0 1 4 16.3v-5.6A2.7 2.7 0 0 1 6.7 8Zm1.8 4.2v2.1m7-2.1v2.1"
             />
           </svg>
+        ) : platform === "x" ? (
+          <svg viewBox="0 0 24 24" role="img">
+            <path
+              fill="currentColor"
+              d="M14.1 10.4 21.2 2h-1.7l-6.2 7.3L8.4 2H2.7l7.5 11.1L2.7 22h1.7l6.6-7.8 5.3 7.8h5.7l-7.9-11.6Zm-2.3 2.7-.8-1.1-6-8.7h2.6l4.8 7 .8 1.1 6.3 9.2H17l-5.2-7.5Z"
+            />
+          </svg>
         ) : platform === "wechat" ? (
           <svg viewBox="0 0 24 24" role="img">
             <path
@@ -63,15 +72,46 @@ const iconLabel: Record<Platform, string> = {
           <span>{iconLabel[platform]}</span>
         )}
       </span>
-      <span class="social-link-copy">
-        <strong>{label}</strong>
-        {handle && <small>{handle}</small>}
-      </span>
+      {!iconOnly && (
+        <span class="social-link-copy">
+          <strong>{label}</strong>
+          {handle && <small>{handle}</small>}
+        </span>
+      )}
     </a>
   ) : (
-    <span class:list={["social-link social-link-disabled", compact && "social-link-compact"]}>
+    <span
+      class:list={["social-link social-link-disabled", compact && "social-link-compact"]}
+      aria-label={label}
+      title={label}
+    >
       <span class="social-link-icon" data-platform={platform} aria-hidden="true">
-        {platform === "wechat" ? (
+        {platform === "github" ? (
+          <svg viewBox="0 0 24 24" role="img">
+            <path
+              fill="currentColor"
+              d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.18-3.37-1.18a2.65 2.65 0 0 0-1.11-1.46c-.91-.62.07-.61.07-.61a2.1 2.1 0 0 1 1.53 1.03 2.13 2.13 0 0 0 2.91.83 2.13 2.13 0 0 1 .63-1.34c-2.22-.25-4.56-1.11-4.56-4.95a3.87 3.87 0 0 1 1.03-2.69 3.6 3.6 0 0 1 .1-2.65s.84-.27 2.75 1.03A9.47 9.47 0 0 1 12 6.98a9.5 9.5 0 0 1 2.5.34c1.9-1.3 2.74-1.03 2.74-1.03.55 1.38.2 2.4.1 2.65a3.86 3.86 0 0 1 1.03 2.69c0 3.85-2.34 4.69-4.57 4.94a2.39 2.39 0 0 1 .68 1.86v2.76c0 .27.18.58.69.48A10 10 0 0 0 12 2Z"
+            />
+          </svg>
+        ) : platform === "bilibili" ? (
+          <svg viewBox="0 0 24 24" role="img">
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+              d="m8 5 2.1 2.2M16 5l-2.1 2.2M6.7 8h10.6A2.7 2.7 0 0 1 20 10.7v5.6a2.7 2.7 0 0 1-2.7 2.7H6.7A2.7 2.7 0 0 1 4 16.3v-5.6A2.7 2.7 0 0 1 6.7 8Zm1.8 4.2v2.1m7-2.1v2.1"
+            />
+          </svg>
+        ) : platform === "x" ? (
+          <svg viewBox="0 0 24 24" role="img">
+            <path
+              fill="currentColor"
+              d="M14.1 10.4 21.2 2h-1.7l-6.2 7.3L8.4 2H2.7l7.5 11.1L2.7 22h1.7l6.6-7.8 5.3 7.8h5.7l-7.9-11.6Zm-2.3 2.7-.8-1.1-6-8.7h2.6l4.8 7 .8 1.1 6.3 9.2H17l-5.2-7.5Z"
+            />
+          </svg>
+        ) : platform === "wechat" ? (
           <svg viewBox="0 0 24 24" role="img">
             <path
               fill="none"
@@ -86,10 +126,12 @@ const iconLabel: Record<Platform, string> = {
           <span>{iconLabel[platform]}</span>
         )}
       </span>
-      <span class="social-link-copy">
-        <strong>{label}</strong>
-        <small>Coming soon</small>
-      </span>
+      {!iconOnly && (
+        <span class="social-link-copy">
+          <strong>{label}</strong>
+          <small>Coming soon</small>
+        </span>
+      )}
     </span>
   )
 }

@@ -63,6 +63,7 @@ type Dictionary = {
     more: string;
     github: string;
     bilibili: string;
+    x: string;
     xiaohongshu: string;
     wechat: string;
     demo: string;
@@ -124,10 +125,10 @@ export const ui: Record<SiteLang, Dictionary> = {
       ],
       focusTitle: "当前关注",
       focusDescription: "Agent 设计、评测和 harness。",
-      projectsTitle: "开源项目",
-      projectsDescription: "偏 GitHub repo 管理，先用手动维护保证每个项目都有清楚说明。",
-      writingTitle: "最近写作",
-      writingDescription: "技术文章、论文阅读、实验观察和工程思考会汇入同一个博客流。",
+      projectsTitle: "项目小集",
+      projectsDescription: "围绕 AI、Agent 和效率工具的项目实践。",
+      writingTitle: "博客笔记",
+      writingDescription: "论文阅读、工程观察和 AI 工具实践的整理与分享。",
       researchTitle: "研究笔记",
       researchDescription: "论文阅读、实验观察和问题拆解。",
       lifeTitle: "生活切片",
@@ -169,6 +170,7 @@ export const ui: Record<SiteLang, Dictionary> = {
       more: "更多",
       github: "GitHub",
       bilibili: "Bilibili",
+      x: "X",
       xiaohongshu: "小红书",
       wechat: "微信公众号",
       demo: "Demo",
@@ -233,10 +235,10 @@ export const ui: Record<SiteLang, Dictionary> = {
       ],
       focusTitle: "Current focus",
       focusDescription: "Agent design, evaluation, and harness work.",
-      projectsTitle: "Open projects",
-      projectsDescription: "A manually curated repo-style list with clear context for each project.",
-      writingTitle: "Recent writing",
-      writingDescription: "Technical writing, paper notes, experiment observations, and engineering thinking in one stream.",
+      projectsTitle: "Project Notes",
+      projectsDescription: "Project practice around AI, Agent systems, and productivity tools.",
+      writingTitle: "Blog Notes",
+      writingDescription: "Paper reading, engineering observations, and notes on AI tools.",
       researchTitle: "Research notes",
       researchDescription: "Paper reading, experiment observations, and question breakdowns.",
       lifeTitle: "Life fragments",
@@ -278,6 +280,7 @@ export const ui: Record<SiteLang, Dictionary> = {
       more: "More",
       github: "GitHub",
       bilibili: "Bilibili",
+      x: "X",
       xiaohongshu: "RED",
       wechat: "WeChat",
       demo: "Demo",
