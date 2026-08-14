@@ -30,13 +30,6 @@ type Dictionary = {
       label: string;
       value: string;
     }[];
-    themesTitle: string;
-    themesDescription: string;
-    themeShelf: {
-      title: string;
-      description: string;
-      meta: string;
-    }[];
     focusTitle: string;
     focusDescription: string;
     projectsTitle: string;
@@ -70,6 +63,8 @@ type Dictionary = {
     more: string;
     github: string;
     bilibili: string;
+    xiaohongshu: string;
+    wechat: string;
     demo: string;
     caseStudy: string;
     noTranslation: string;
@@ -110,7 +105,7 @@ export const ui: Record<SiteLang, Dictionary> = {
       title: "你好，我是 sikm。",
       subtitle: "Agent / LLM 算法方向研究生",
       description:
-        "我在这里长期沉淀关于 Agent、评测、RAG、工具调用和工程实践的博客与项目，也保留少量真实生活记录。",
+        "你好，我是 sikm！一个努力避免摸鱼的 AI 方向研究生。关注 Agent、RL 和大模型，也会在这里记录有趣项目、论文阅读和技术博客。",
       primaryCta: "阅读博客",
       secondaryCta: "查看项目",
     },
@@ -125,40 +120,6 @@ export const ui: Record<SiteLang, Dictionary> = {
         {
           label: "最近在研究",
           value: "Agent",
-        },
-      ],
-      themesTitle: "主题书架",
-      themesDescription: "长期会反复翻看的方向，比时间线更能说明我在关心什么。",
-      themeShelf: [
-        {
-          title: "Agent Systems",
-          description: "从工作流、状态、工具调用到可运行系统的整体设计。",
-          meta: "systems / workflow",
-        },
-        {
-          title: "Agent Evaluation",
-          description: "关注评测稳定性、任务定义、失效模式和可复现观察。",
-          meta: "eval / reliability",
-        },
-        {
-          title: "Harness / Workflow",
-          description: "把实验、工具、日志和回看流程组织成能持续迭代的工程骨架。",
-          meta: "harness / process",
-        },
-        {
-          title: "LLM Reading Notes",
-          description: "论文、技术报告和源码阅读中的结构化笔记。",
-          meta: "paper / notes",
-        },
-        {
-          title: "Engineering Practice",
-          description: "把想法做成项目时留下的实现选择、问题和复盘。",
-          meta: "build / ship",
-        },
-        {
-          title: "Life Fragments",
-          description: "少量生活切片，让这个站不只剩下技术陈列。",
-          meta: "photo / daily",
         },
       ],
       focusTitle: "当前关注",
@@ -208,6 +169,8 @@ export const ui: Record<SiteLang, Dictionary> = {
       more: "更多",
       github: "GitHub",
       bilibili: "Bilibili",
+      xiaohongshu: "小红书",
+      wechat: "微信公众号",
       demo: "Demo",
       caseStudy: "案例分析",
       noTranslation: "该内容暂无对应英文版本，已回退到列表页。",
@@ -251,7 +214,7 @@ export const ui: Record<SiteLang, Dictionary> = {
       title: "Hi, I’m sikm.",
       subtitle: "Agent / LLM Algorithm Graduate Student",
       description:
-        "This site is where I keep blog notes, paper reading, project work, and a small amount of personal context around how I build AI systems.",
+        "Hi, I am sikm, an AI graduate student trying hard not to slack off. I focus on Agent, RL, and large models, and write about interesting projects, paper reading, and technical notes.",
       primaryCta: "Read blog",
       secondaryCta: "View projects",
     },
@@ -266,40 +229,6 @@ export const ui: Record<SiteLang, Dictionary> = {
         {
           label: "Researching",
           value: "Agent",
-        },
-      ],
-      themesTitle: "Theme Shelf",
-      themesDescription: "Long-running directions I return to more often than a simple timeline can show.",
-      themeShelf: [
-        {
-          title: "Agent Systems",
-          description: "Workflow, state, tool use, and the shape of runnable agent systems.",
-          meta: "systems / workflow",
-        },
-        {
-          title: "Agent Evaluation",
-          description: "Evaluation stability, task definitions, failure modes, and reproducible observations.",
-          meta: "eval / reliability",
-        },
-        {
-          title: "Harness / Workflow",
-          description: "Engineering structures for experiments, tools, logs, and iterative review.",
-          meta: "harness / process",
-        },
-        {
-          title: "LLM Reading Notes",
-          description: "Structured notes from papers, technical reports, and source reading.",
-          meta: "paper / notes",
-        },
-        {
-          title: "Engineering Practice",
-          description: "Implementation choices, problems, and reviews from turning ideas into projects.",
-          meta: "build / ship",
-        },
-        {
-          title: "Life Fragments",
-          description: "A small layer of life so the site does not become only a technical display.",
-          meta: "photo / daily",
         },
       ],
       focusTitle: "Current focus",
@@ -349,6 +278,8 @@ export const ui: Record<SiteLang, Dictionary> = {
       more: "More",
       github: "GitHub",
       bilibili: "Bilibili",
+      xiaohongshu: "RED",
+      wechat: "WeChat",
       demo: "Demo",
       caseStudy: "Case Study",
       noTranslation: "This entry has no translation yet, so the switch falls back to the list page.",

@@ -2,12 +2,19 @@
 import Container from "../layout/Container.astro";
 import Badge from "../ui/Badge.astro";
 import SectionTitle from "../ui/SectionTitle.astro";
+import SocialLink from "../ui/SocialLink.astro";
 import ArticleCard from "../content/ArticleCard.astro";
 import ProjectCard from "../content/ProjectCard.astro";
 import { ui } from "../../i18n/ui";
 import {
+  BILIBILI_HANDLE,
   BILIBILI_URL,
+  GITHUB_HANDLE,
   GITHUB_URL,
+  WECHAT_HANDLE,
+  WECHAT_URL,
+  XIAOHONGSHU_HANDLE,
+  XIAOHONGSHU_URL,
   getAboutPath,
   getCollectionPath,
   getFriendsPath,
@@ -42,15 +49,6 @@ const sideNavItems = [
   { href: getFriendsPath(lang), label: copy.nav.friends },
   { href: getAboutPath(lang), label: copy.nav.about },
 ];
-
-const themeHrefs = [
-  getCollectionPath("writing", lang),
-  getCollectionPath("writing", lang),
-  getCollectionPath("projects", lang),
-  getCollectionPath("writing", lang),
-  getCollectionPath("projects", lang),
-  getCollectionPath("life", lang),
-];
 ---
 
   <div class="welcome-gate" data-welcome-gate>
@@ -79,8 +77,10 @@ const themeHrefs = [
         <h2>sikm</h2>
         <p>{copy.hero.description}</p>
         <div class="profile-links">
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer">{copy.labels.github}</a>
-          <a href={BILIBILI_URL} target="_blank" rel="noreferrer">{copy.labels.bilibili}</a>
+          <SocialLink platform="github" href={GITHUB_URL} label={copy.labels.github} handle={GITHUB_HANDLE} compact />
+          <SocialLink platform="bilibili" href={BILIBILI_URL} label={copy.labels.bilibili} handle={BILIBILI_HANDLE} compact />
+          <SocialLink platform="xiaohongshu" href={XIAOHONGSHU_URL} label={copy.labels.xiaohongshu} handle={XIAOHONGSHU_HANDLE} compact />
+          <SocialLink platform="wechat" href={WECHAT_URL} label={copy.labels.wechat} handle={WECHAT_HANDLE} compact />
         </div>
       </section>
 
@@ -92,26 +92,6 @@ const themeHrefs = [
     </aside>
 
     <main class="content-feed">
-      <section class="feed-section">
-        <SectionTitle
-          eyebrow={copy.labels.featured}
-          title={copy.home.themesTitle}
-          description={copy.home.themesDescription}
-        />
-        <div class="theme-shelf compact-shelf mt-5">
-          {copy.home.themeShelf.map((theme, index) => (
-            <a class="theme-book" href={themeHrefs[index]} style={`--book-index: ${index + 1}`}>
-              <div class="theme-book-spine" aria-hidden="true"></div>
-              <div>
-                <p>{theme.meta}</p>
-                <h3>{theme.title}</h3>
-                <span>{theme.description}</span>
-              </div>
-            </a>
-          ))}
-        </div>
-      </section>
-
       <section class="feed-section">
         <div class="section-heading-row">
           <SectionTitle
@@ -131,9 +111,9 @@ const themeHrefs = [
               tags={entry.data.tags}
               readTime={entry.data.readTime}
               lang={lang}
-              cover={index === 0 ? entry.data.cover : undefined}
+              cover={entry.data.cover}
               coverAlt={entry.data.coverAlt}
-              variant={index === 0 ? "default" : "compact"}
+              variant={index === 0 ? "featured" : "horizontal"}
             />
           ))}
         </div>
@@ -162,7 +142,7 @@ const themeHrefs = [
               coverAlt={entry.data.coverAlt}
               repoUrl={entry.data.repoUrl}
               demoUrl={entry.data.demoUrl}
-              variant="compact"
+              variant="horizontal"
             />
           ))}
         </div>
@@ -186,8 +166,10 @@ const themeHrefs = [
       <section class="widget-card">
         <p class="eyebrow">Quick Links</p>
         <div class="quick-links">
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer">{copy.labels.github}</a>
-          <a href={BILIBILI_URL} target="_blank" rel="noreferrer">{copy.labels.bilibili}</a>
+          <SocialLink platform="github" href={GITHUB_URL} label={copy.labels.github} handle={GITHUB_HANDLE} compact />
+          <SocialLink platform="bilibili" href={BILIBILI_URL} label={copy.labels.bilibili} handle={BILIBILI_HANDLE} compact />
+          <SocialLink platform="xiaohongshu" href={XIAOHONGSHU_URL} label={copy.labels.xiaohongshu} handle={XIAOHONGSHU_HANDLE} compact />
+          <SocialLink platform="wechat" href={WECHAT_URL} label={copy.labels.wechat} handle={WECHAT_HANDLE} compact />
           <a href={getFriendsPath(lang)}>{copy.nav.friends}</a>
         </div>
       </section>

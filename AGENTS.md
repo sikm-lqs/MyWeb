@@ -49,8 +49,9 @@ Implemented:
 - Fallback to the target-language collection page when a translation is missing
 - Explicit light/dark theme switching
 - Home page data queries for latest projects, latest blog entries, and life notes
-- Three-column home layout with profile/navigation, theme shelf/latest content, and side widgets
+- Three-column home layout with profile/navigation, latest content, projects, and side widgets
 - Warm editorial visual system based on paper tones, serif typography, soft borders, and restrained cards
+- Icon-based social links; the GitHub profile is `https://github.com/sikm-lqs`
 - Placeholder avatar and cover images
 
 Known next priorities:
@@ -155,6 +156,7 @@ The implemented UI follows the tokens and component styles in `src/styles/global
 - Preserve the static, file-driven architecture unless the user explicitly changes scope.
 - Prefer existing components, layouts, i18n helpers, and content utilities over new abstractions.
 - Keep slugs stable and English-like; avoid spaces and Chinese filenames for new image assets.
+- Keep personal/social links in `src/i18n/utils.ts`; the current GitHub username is `sikm-lqs`.
 - For bilingual content, keep the same `translationKey` across languages.
 - Do not commit secrets, `.env` files, build output, or large uncompressed images.
 - If changing content schemas, route behavior, homepage data rules, or publishing workflow, update `README.md`, `dev-docs/内容发布流程.md`, `CLAUDE.md`, and this file together.

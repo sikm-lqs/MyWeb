@@ -44,6 +44,7 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - 基于 `translationKey` 的双语内容配对与语言切换回退
 - 首页最新项目、最新博客和生活记录取数
 - 占位头像、封面图和暖纸面 editorial 视觉系统
+- 图标化个人链接入口，GitHub 指向 `https://github.com/sikm-lqs`
 - `npm run build` 曾构建通过
 
 当前主要待办：
@@ -140,6 +141,7 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - 修改前先阅读相关页面、组件和 `src/content.config.ts`
 - 保持文件驱动内容管理，不引入 CMS、数据库或后端，除非需求明确变更
 - 新增内容优先使用稳定英文 slug；图片路径从站点根路径开始，例如 `/images/projects/demo-cover.svg`
+- GitHub username 使用 `sikm-lqs`，个人主页链接常量维护在 `src/i18n/utils.ts`
 - 中英文版本的 `translationKey` 必须一致；允许先发布单语内容
 - 不要提交 `.env`、密钥、构建产物或大型未压缩图片
 - 改动内容 schema、首页取数、路由规则时，同步更新 `README.md`、`dev-docs/内容发布流程.md` 以及本文件

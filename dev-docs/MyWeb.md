@@ -42,7 +42,7 @@ Welcome Gate + 三栏博客首页 + 暖纸面 editorial 视觉系统
 3. 进入真正首页。
 4. 真正首页采用三栏布局：
    * 左侧：作者卡 + 站内导航
-   * 中间：主题书架 + 最近写作 + 开源项目
+   * 中间：最近写作 + 开源项目
    * 右侧：Now + Quick Links + 留言入口 + 生活切片
 
 ---
@@ -159,7 +159,7 @@ Home / Blog / Projects / Life / Guestbook / Links / About / Theme Toggle / 中�
 
 说明：
 
-* `Research` 当前保留为内容频道和主题书架跳转目标，但不进入主导航。
+* `Research` 当前保留为内容频道，但不进入主导航；公开详情页统一并入 Blog 路由。
 * 主导航更偏博客小站气质，避免过度研究站化。
 
 ---
@@ -206,7 +206,6 @@ A long-term place for notes on Agent, LLMs, engineering practice, and small frag
 
 中栏：
 
-* 主题书架
 * 最近写作
 * 开源项目
 
@@ -217,22 +216,20 @@ A long-term place for notes on Agent, LLMs, engineering practice, and small frag
 * 留言入口
 * 生活切片
 
-## 4.3 主题书架
+## 4.3 后续栏目 / 合集
 
-当前主题：
+当前首页已移除抽象的主题书架。后续更适合把博客内容组织为真实可维护的栏目或合集，例如：
 
-* Agent Systems
-* Agent Evaluation
-* Harness / Workflow
-* LLM Reading Notes
-* Engineering Practice
-* Life Fragments
+* LeetCode 手撕合集
+* Paper Research 合集
+* 开源 AI 工具 / 资讯分享合集
+* Agent / RL / 大模型相关专题
 
-当前实现：
+设计原则：
 
-* 每个主题是可点击卡片。
-* 目前先跳转到现有频道，如 Blog / Research / Projects / Life。
-* 后续可以升级为独立专题页或主题筛选页。
+* 合集必须来自真实内容沉淀，不做空泛方向陈列。
+* 合集入口可以后续做成独立专题页、标签筛选页或 Blog 内的栏目导航。
+* 首页优先展示最新写作和项目，避免首屏被抽象分类占据。
 
 ## 4.4 首页取数规则
 
@@ -428,7 +425,8 @@ public/images/
 * 三栏博客首页
 * 暖纸面 editorial 视觉系统
 * 显式浅色 / 深色主题切换
-* 主题书架整卡可点击
+* 最近写作 / 项目横向图文卡片
+* 图标化社交链接入口
 * Guestbook / Links 占位页
 
 ## V0.5：内容与专题
@@ -436,7 +434,7 @@ public/images/
 计划：
 
 * 补充真实文章和项目
-* 为主题书架增加独立专题页或主题筛选
+* 为博客增加真实栏目 / 合集入口
 * 完善 About 信息
 * 补充真实联系方式
 

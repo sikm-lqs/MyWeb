@@ -2,8 +2,19 @@
 import Container from "../layout/Container.astro";
 import SectionTitle from "../ui/SectionTitle.astro";
 import Badge from "../ui/Badge.astro";
+import SocialLink from "../ui/SocialLink.astro";
 import { ui } from "../../i18n/ui";
-import { BILIBILI_URL, GITHUB_URL, type SiteLang } from "../../i18n/utils";
+import {
+  BILIBILI_HANDLE,
+  BILIBILI_URL,
+  GITHUB_HANDLE,
+  GITHUB_URL,
+  WECHAT_HANDLE,
+  WECHAT_URL,
+  XIAOHONGSHU_HANDLE,
+  XIAOHONGSHU_URL,
+  type SiteLang,
+} from "../../i18n/utils";
 
 interface Props {
   lang: SiteLang;
@@ -57,22 +68,10 @@ const copy = ui[lang];
               Links
             </p>
             <div class="mt-2.5 flex flex-wrap gap-2">
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noreferrer"
-                class="inline-flex items-center rounded-full border border-[#d4c9b8] bg-transparent px-3 py-1.5 text-sm font-medium text-[#5c5246] transition hover:bg-[#f0e9df] hover:text-[#1f1a14]"
-              >
-                GitHub
-              </a>
-              <a
-                href={BILIBILI_URL}
-                target="_blank"
-                rel="noreferrer"
-                class="inline-flex items-center rounded-full border border-[#d4c9b8] bg-transparent px-3 py-1.5 text-sm font-medium text-[#5c5246] transition hover:bg-[#f0e9df] hover:text-[#1f1a14]"
-              >
-                Bilibili
-              </a>
+              <SocialLink platform="github" href={GITHUB_URL} label={copy.labels.github} handle={GITHUB_HANDLE} compact />
+              <SocialLink platform="bilibili" href={BILIBILI_URL} label={copy.labels.bilibili} handle={BILIBILI_HANDLE} compact />
+              <SocialLink platform="xiaohongshu" href={XIAOHONGSHU_URL} label={copy.labels.xiaohongshu} handle={XIAOHONGSHU_HANDLE} compact />
+              <SocialLink platform="wechat" href={WECHAT_URL} label={copy.labels.wechat} handle={WECHAT_HANDLE} compact />
             </div>
           </div>
         </section>

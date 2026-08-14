@@ -38,7 +38,7 @@ const entries = collection === "writing"
           {copy.collections[collection].empty}
         </div>
       ) : collection === "projects" ? (
-        <div class="mt-10 grid gap-6 lg:grid-cols-2">
+        <div class="mt-10 grid gap-5">
           {entries.map((entry) => (
             <ProjectCard
               href={getEntryPath("projects", lang, entry)}
@@ -50,12 +50,15 @@ const entries = collection === "writing"
               coverAlt={entry.data.coverAlt}
               repoUrl={entry.data.repoUrl}
               demoUrl={entry.data.demoUrl}
+              publishedAt={entry.data.publishedAt}
+              lang={lang}
+              variant="horizontal"
             />
           ))}
         </div>
       ) : (
-        <div class="mt-8 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
-          {entries.map((entry) => (
+        <div class="mt-8 grid gap-5">
+          {entries.map((entry, index) => (
             <ArticleCard
               href={collection === "writing" ? getBlogEntryPath(lang, entry) : getEntryPath(collection, lang, entry)}
               title={entry.data.title}
@@ -66,6 +69,7 @@ const entries = collection === "writing"
               lang={lang}
               cover={entry.data.cover}
               coverAlt={entry.data.coverAlt}
+              variant={index === 0 ? "featured" : "horizontal"}
             />
           ))}
         </div>

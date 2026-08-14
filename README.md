@@ -7,10 +7,11 @@ MyWeb 是 sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、�
 * 每次打开首页先进入沉浸式欢迎页
 * 点击「进入小屋」后进入三栏博客首页
 * 左侧为作者卡和站内导航
-* 中间为主题书架、最近写作和开源项目
+* 中间为最近写作和开源项目
 * 右侧为 Now、Quick Links、留言入口和生活切片
 * 支持中英文双语
 * 支持显式浅色 / 深色主题切换
+* 个人链接统一使用图标化入口，GitHub username 为 `sikm-lqs`
 * 视觉基线以 `src/styles/global.css` 中的 CSS tokens 为准
 
 ## 内容频道
@@ -57,7 +58,7 @@ https://myweb-649.pages.dev/
 * 中英文首页
 * 沉浸式欢迎页入口
 * 三栏博客首页布局
-* 作者卡、Now、Quick Links、主题书架
+* 作者卡、Now、Quick Links
 * 显式浅色 / 深色主题切换
 * 中英文 About 页面
 * Blog / Projects / Research / Life 四个内容频道
@@ -90,7 +91,7 @@ https://myweb-649.pages.dev/
 下一阶段优先项：
 
 1. 补充真实文章、项目、研究、生活内容
-2. 将主题书架升级为独立专题页或带筛选的主题入口
+2. 将博客栏目升级为真实合集入口，如 LeetCode 手撕、Paper Research、开源 AI 工具 / 资讯分享
 3. 完善 Guestbook 轻量留言墙
 4. 将 Life 页面改造成照片墙
 5. 补充 GitHub / Email / 社交链接
