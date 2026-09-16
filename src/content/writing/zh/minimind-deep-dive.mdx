@@ -1,0 +1,1962 @@
+---
+title: "MiniMind 项目手撕理解"
+routeSlug: "minimind-deep-dive"
+summary: "逐行拆解 MiniMind 的完整训练管线：预训练、SFT 与 LoRA、DPO / PPO / GRPO 强化学习，以及 GRPO / DAPO / GSPO 的策略损失推导——数据构造、损失函数与关键工程细节。"
+publishedAt: "2026-09-16"
+tags:
+  - LLM
+  - Pretrain
+  - SFT
+  - RLHF
+readTime: "49 分钟"
+lang: "zh-CN"
+translationKey: "minimind-deep-dive"
+draft: false
+featured: false
+---
+
+## 1. Pretrain
+
+### MiniMind 预训练完全指南
+
+> 从一行 JSON 到一个会"词语接龙"的基座模型：数据 → 处理 → 加载 → 训练 → 损失，逐行代码拆解。
+>
+> 涉及文件：`dataset/pretrain_t2t_mini.jsonl`、`dataset/lm_dataset.py`、`trainer/train_pretrain.py`、`trainer/trainer_utils.py`、`model/model_minimind.py`、`model/tokenizer_config.json`
+
+---
+
+### 0. 一句话理解预训练在干什么
+
+预训练（Pretrain）只做一件事：**下一个 token 预测（next token prediction）**。
+
+给模型看一句话的前半段，让它猜下一个字（token）是什么，猜错了就用交叉熵损失"惩罚"它，反向传播调整参数。把 127 万条文本这样滚过几遍之后，模型就内化了语言的统计规律——这就是"词语接龙"的本质，也是一切大模型能力的源头。
+
+整个数据流：
+
+```
+pretrain_t2t_mini.jsonl ({"text": "..."} × 127万行)
+│
+▼ PretrainDataset.__getitem__ dataset/lm_dataset.py:47
+文本 → tokenize → 加 bos/eos → pad 到 340 → input_ids + labels
+│
+▼ DataLoader + SkipBatchSampler trainer/train_pretrain.py:190
+按 batch_size=32 切批，随机打乱，支持断点跳过
+│
+▼ model(input_ids, labels) model/model_minimind.py:423
+embed → 8层Transformer → lm_head → logits (B, 340, 6400)
+│
+▼ shift-by-one 交叉熵 model/model_minimind.py:433
+logits[:, :-1] 预测 labels[:, 1:]，-100 位置忽略
+│
+▼ 反向传播（bf16 + 梯度累积×8 + 裁剪）
+AdamW 更新参数 → 定期保存 out/pretrain_768.pth
+```
+
+---
+
+### 1. 预训练数据长什么样
+
+文件：`dataset/pretrain_t2t_mini.jsonl`，共 **1,270,238 行**（约 1.6GB），每行一个 JSON，只有一个字段 `text`：
+
+```json
+{"text": "给我生成一首有关秋天的诗歌。秋日早晨，清风拂面。\n金色的叶子，似火在燃烧。\n露珠晶莹，如珍珠般美丽。..."}
+```
+
+注意几个特点：
+
+- **不是对话格式**。没有 `{"role": "user", ...}` 这种结构——**那是 SFT 阶段的事。预训练数据就是连续纯文本**。
+- **多条语料拼接成一行**。上面这条实际是"写诗请求+诗+年会创意问答+无为而治问答"三段不相关文本首尾相接拼成的。这样做是为了**充分利用固定长度的训练窗口**（340 token），避免每条短语料都浪费大量 padding。
+- **无标签**。标签是训练时从文本自身"移位"构造的（见第 6 节），这就是"自监督"的含义。
+
+> 数据是怎么来的？项目用更大的模型（如 Qwen）批量生成/改写了这些文本，属于"蒸馏式"语料。详见 `dataset/dataset.md`。
+
+---
+
+### 2. 数据处理：文本 → (input_ids, labels)
+
+核心代码：`dataset/lm_dataset.py:37-55` 的 `PretrainDataset`：
+
+```python
+class PretrainDataset(Dataset):
+    def __init__(self, data_path, tokenizer, max_length=512):
+        self.samples = load_dataset('json', data_files=data_path, split='train')
+
+    def __getitem__(self, index):
+        sample = self.samples[index]
+        # ① 分词：不加特殊 token，最多截断到 max_length-2（给 bos/eos 留位）
+        tokens = self.tokenizer(str(sample['text']),
+                                add_special_tokens=False,
+                                max_length=self.max_length - 2,
+                                truncation=True).input_ids
+        # ② 手动包上首尾标记：<bos> ... <eos>
+        tokens = [self.tokenizer.bos_token_id] + tokens + [self.tokenizer.eos_token_id]
+        # ③ 右 pad 到固定长度 340
+        input_ids = tokens + [self.tokenizer.pad_token_id] * (self.max_length - len(tokens))
+        input_ids = torch.tensor(input_ids, dtype=torch.long)
+        # ④ 标签 = input_ids 的克隆，但 pad 位置置为 -100（不参与损失）
+        labels = input_ids.clone()
+        labels[input_ids == self.tokenizer.pad_token_id] = -100
+        return input_ids, labels
+```
+
+四步走，用真实例子演示。取文本 `"秋天来了，树叶变黄了。"`，tokenizer 实测结果：
+
+```
+文本: 秋 天 来 了 ， 树 叶 变 黄 了 。
+ids: 3580 993 509 423 294 2373 3039 828 3299 423 302
+```
+
+经过 ②③④ 之后（设 max_length=340）：
+
+```
+input_ids: [1, 3580, 993, 509, 423, 294, 2373, 3039, 828, 3299, 423, 302, 2, 0, 0, ..., 0]
+bos eos ← pad 补齐到340 →
+labels: [1, 3580, 993, 509, 423, 294, 2373, 3039, 828, 3299, 423, 302, 2, -100, -100, ..., -100]
+```
+
+三个特殊 token 的身份（`model/tokenizer_config.json`）：
+
+| token | 字符串 | id | 作用 |
+| ----- | ------ | -- | ---- |
+| bos   | `<\|im_start\|>` | 1 | 序列开始 |
+| eos   | `<\|im_end\|>` | 2 | 序列结束（推理时遇到它就停） |
+| pad   | `<\|endoftext\|>` | 0 | 补齐长度，损失中被 `-100` 屏蔽 |
+
+要点解读：
+
+- **为什么截断到 `max_length - 2`？** 因为后面还要手动加 bos 和 eos 两个 token，预留位置。
+- **为什么 labels 就是 input_ids 本身？** 因为"移位"操作在模型 forward 里做（`logits[:, :-1]` 对 `labels[:, 1:]`），数据侧只需提供原序列。预训练和 SFT 共用这个约定。
+- **`-100` 是 PyTorch 交叉熵的默认 `ignore_index`**：该位置不参与损失计算。预训练里只有 pad 被屏蔽；到了 SFT，用户提问部分也会被屏蔽（`SFTDataset.generate_labels`），让模型只学习"怎么回答"。
+- **词表只有 6400**。这是项目自己训练的极简 tokenizer（对比 Qwen 的 15 万+），词表小 → 嵌入矩阵小 → 整个模型才能压到 ~64M 参数。代价是中文压缩率低，1 token ≈ 1.5~1.7 个字符，所以 340 token 大约装 500+ 汉字。
+
+---
+
+### 3. 数据加载：怎么划分成训练 batch
+
+`trainer/train_pretrain.py:186-197`：
+
+```python
+for epoch in range(start_epoch, args.epochs):
+    setup_seed(42 + epoch)
+    indices = torch.randperm(len(train_ds)).tolist() # 每个 epoch 重新洗牌
+    skip = start_step if (epoch == start_epoch and start_step > 0) else 0
+    batch_sampler = SkipBatchSampler(train_sampler or indices, args.batch_size, skip)
+    loader = DataLoader(train_ds, batch_sampler=batch_sampler,
+                        num_workers=8, pin_memory=True)
+```
+
+结构是经典的 PyTorch 三层：
+
+```
+Dataset（取一条） → Sampler（决定顺序） → DataLoader（组 batch + 多进程预取）
+PretrainDataset SkipBatchSampler num_workers=8, pin_memory
+```
+
+几个关键设计：
+
+- **没有划分验证集**。1,270,238 条样本全部用于训练。对"从零学语言"阶段，监测训练 loss 曲线下降就够了；真正的能力评估在训完后用 `eval_llm.py` 做题。
+- **每个 epoch 重新 `randperm` 洗牌**，且随机种子随 epoch 变化（`42 + epoch`），保证每轮顺序不同但可复现。
+- **每个 batch 固定 32 条，每条固定 340 token**，所以一个 batch 的形状恒为 `(32, 340)`。一个 epoch 的步数 = $\lceil 1{,}270{,}238 / 32 \rceil \approx$ **39,695 步**。
+- **`SkipBatchSampler`（`trainer_utils.py:134`）为断点续训服务**：它先按 batch_size 把顺序切成一批一批，然后**跳过前 `skip` 个 batch** 再开始 yield。这样训练中断后重启，可以精确从上次停下的那一步继续，不用重跑已训数据。
+- **梯度累积放大等效 batch**：`batch_size=32 × accumulation_steps=8 = 等效 batch 256`。即每 256×340 ≈ 8.7 万 token 才更新一次参数，训练更稳定。
+- 多卡（DDP）时，`DistributedSampler` 替代手动 randperm，把数据切成不重叠的 N 份，每卡一份。
+
+---
+
+### 4. 一个 epoch 里发生什么
+
+`train_epoch()`（`train_pretrain.py:45-105`）每个训练步依次做 7 件事：
+
+```python
+for step, (input_ids, labels) in enumerate(loader, start=start_step + 1):
+    input_ids = input_ids.to(args.device) # (32, 340) 上 GPU
+    labels = labels.to(args.device)
+
+    # ① 学习率调度：每一步都重算 lr
+    lr = get_lr(epoch * iters + step, args.epochs * iters, args.learning_rate)
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+    # ② 前向（bf16 混合精度）
+    with autocast_ctx:
+        res = model(input_ids, labels=labels)
+        loss = res.loss + res.aux_loss # 交叉熵 + MoE辅助损失(Dense时为0)
+        loss = loss / args.accumulation_steps # 除以8，配合梯度累积
+
+    # ③ 反向传播
+    scaler.scale(loss).backward()
+
+    # ④ 攒够 8 步才更新一次参数
+    if step % args.accumulation_steps == 0:
+        scaler.unscale_(optimizer)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0) # 梯度裁剪
+        scaler.step(optimizer) # AdamW 更新
+        scaler.update()
+        optimizer.zero_grad(set_to_none=True)
+
+    # ⑤ 每 100 步打日志（loss / lr / 预计剩余时间）
+    # ⑥ 每 1000 步保存权重 out/pretrain_768.pth + 断点 checkpoints/pretrain_768_resume.pth
+    # ⑦ 显式 del 本轮张量，压低显存峰值
+```
+
+#### 4.1 学习率：warmup + 余弦退火
+
+`trainer_utils.py:40` 一行公式：
+
+```python
+def get_lr(current_step, total_steps, lr):
+    return lr * (0.1 + 0.45 * (1 + math.cos(math.pi * current_step / total_steps)))
+```
+
+画出来就是：从 `0.1×lr` 起步，按余弦曲线先升到峰值再降回 `0.1×lr`。
+
+```
+lr
+5e-4 ┤        ╭──────╮                ← 峰值 = lr × (0.1+0.45×2) = lr
+     │      ╱          ╲
+     │     ╱             ╲
+5e-5 ┤────╯                ╲────────  ← 起点/终点 = lr × 0.1
+     └────────────────────────────── step
+     0                        total
+```
+
+- 前段低 lr 是 **warmup**：模型从零初始化，一开始就大踏步容易发散。
+- 后段衰减到接近 0 是 **余弦退火**：训练后期小步微调，收敛更平滑。
+- 注意它**按全局步数（跨 epoch 连续计数）调度**，不是每个 epoch 重置——`epoch * iters + step`。
+
+#### 4.2 混合精度与梯度缩放
+
+- `torch.cuda.amp.autocast(dtype=bfloat16)`：前向/反向用 bf16（省一半显存、加速），参数主副本保持 fp32。
+- `GradScaler(enabled=(dtype=='float16'))`：**bf16 时缩放系数恒为 1，等于关闭**（bf16 动态范围大，不会梯度下溢）。代码写成统一形式是为了兼容 fp16 的显卡。
+- 更新前 `unscale_` → `clip_grad_norm_(1.0)`：先还原真实梯度，再把全局梯度范数裁到 1，防梯度爆炸。
+- epoch 末尾还有一个"收尾更新"（`train_pretrain.py:100`）：如果最后的步数没凑满 8 的倍数，把残留梯度也更新掉，不浪费。
+
+#### 4.3 保存两种文件
+
+| 文件                                    | 内容                                          | 用途                     |
+| ------------------------------------- | ------------------------------------------- | ---------------------- |
+| `out/pretrain_768.pth`                | 纯模型权重（转 fp16）                               | 给下游 SFT / 推理加载         |
+| `checkpoints/pretrain_768_resume.pth` | 权重 + 优化器 + scaler + epoch + step + wandb_id | `--from_resume 1` 断点续训 |
+
+续训时（`train_pretrain.py:170-176`）把优化器动量、训练进度全部还原，配合 `SkipBatchSampler` 跳过已训 batch，lr 调度也能无缝接上。
+
+---
+
+### 5. 输入到模型：从一个 id 到一个 768 维向量
+
+输入形状 `(B=32, S=340)` 的整数矩阵，进入 `MiniMindForCausalLM`（`model/model_minimind.py:399`）：
+
+```
+input_ids (32, 340)
+│
+▼ embed_tokens 词嵌入查表：每个 id → 768 维向量
+(32, 340, 768)
+│
+▼ ×8 个 Transformer Block
+│ ├─ RMSNorm → GQA注意力(8个Q头/4组KV头, RoPE位置编码, 因果mask) → 残差
+│ └─ RMSNorm → SwiGLU MLP(768→2432→768) → 残差
+(32, 340, 768)
+│
+▼ 最终 RMSNorm
+│
+▼ lm_head (Linear 768→6400, 与词嵌入共享权重)
+logits (32, 340, 6400) ← 每个位置对词表 6400 个 token 的打分
+```
+
+默认配置（`MiniMindConfig`，`model_minimind.py:38`）：hidden_size=768，8 层，GQA 8 Q 头共享 4 KV 头，中间维 2432，词表 6400，总参数约 **64M**。
+
+两个值得知道的细节：
+
+- **因果 mask**：注意力只允许位置 t 看到 ≤ t 的 token（下三角），保证"预测下一个字"时看不到答案——这是 Causal LM 与 BERT 类模型的根本区别。
+- **权重绑定（weight tying）**：`lm_head.weight` 和 `embed_tokens.weight` 指向同一块内存（`model_minimind.py:418`）。"把字变成向量"和"把向量变回字的打分"用同一个矩阵，省 6400×768 ≈ 490 万参数，对小模型很划算。
+
+---
+
+### 6. 模型输出与损失函数：shift-by-one 交叉熵
+
+训练时传了 `labels`，forward 内部计算损失（`model_minimind.py:430-437`）：
+
+```python
+if labels is not None:
+    x = logits[..., :-1, :].contiguous() # 去掉最后一个位置的预测
+    y = labels[..., 1:].contiguous() # 标签右移一位：去掉第一个 token
+    loss = F.cross_entropy(x.view(-1, x.size(-1)), y.view(-1), ignore_index=-100)
+```
+
+**为什么移位？** 位置 t 的 logits 是在"只看到前 t 个 token"的条件下算出来的，它的职责是预测第 t+1 个 token。所以预测序列和标签序列要错开一位对齐：
+
+```
+位置: 0 1 2 3 4 ...
+input_ids: [bos] [秋] [天] [来] [了] ...
+│ │ │ │
+logits 预测: ▼ ▼ ▼ ▼
+labels: [秋] [天] [来] [了] [，] ...
+↑ 第0位的输出要和"秋"算交叉熵，以此类推
+```
+
+一个 batch 就有 32×339 ≈ 1 万个预测位置同时参与损失。对每个位置，交叉熵 = `-log P(正确token)`：模型给正确字的概率越高，损失越小。
+
+#### 6.1 用 `[a,b,c,d,e,f,g]` 直观看一次 loss
+
+为了看清楚“一个句子为什么会产生很多个 loss”，先忽略 batch，并把一串 token 简化成：
+
+```text
+[a, b, c, d, e, f, g]
+```
+
+数据集返回的 `input_ids` 和 `labels` 先保持相同：
+
+```text
+input_ids: [a, b, c, d, e, f, g]
+labels:    [a, b, c, d, e, f, g]
+```
+
+到了模型的 forward 里，才通过 `[:-1]` 和 `[1:]` 错开一位：
+
+```text
+模型在位置 0 的输出：根据 [a]           预测 b
+模型在位置 1 的输出：根据 [a, b]         预测 c
+模型在位置 2 的输出：根据 [a, b, c]       预测 d
+模型在位置 3 的输出：根据 [a, b, c, d]     预测 e
+模型在位置 4 的输出：根据 [a, b, c, d, e]   预测 f
+模型在位置 5 的输出：根据 [a, b, c, d, e, f] 预测 g
+```
+
+对应的计算张量是：
+
+```text
+logits[:, :-1, :]  → 负责预测 [b, c, d, e, f, g]
+labels[:, 1:]      → 真实答案是 [b, c, d, e, f, g]
+```
+
+注意：训练时这 6 个位置会**并行计算**，不是模型先生成 `b`，再把生成的 `b` 输入进去生成 `c`。因果 mask 只保证位置 0 看不到后面的 token；模型可以同时计算所有位置的预测。
+
+假设模型在三个位置给真实 token 的概率如下：
+
+```text
+P(b | a)       = 0.8
+P(c | a,b)     = 0.5
+P(d | a,b,c)   = 0.1
+```
+
+那么这三个位置的交叉熵分别是：
+
+```text
+loss_0 = -log(0.8) ≈ 0.22
+loss_1 = -log(0.5) ≈ 0.69
+loss_2 = -log(0.1) ≈ 2.30
+```
+
+因此，正确 token 的概率越高，loss 越小；概率越低，loss 越大。严格地说，交叉熵关心的是“正确 token 的概率”，不只是关心它是不是当前概率最高的 token。最后对所有有效位置的 loss 求平均，得到这条样本的语言建模损失；batch 中再对所有样本的有效位置一起求平均。
+
+训练目标可以浓缩成一句话：**让每个位置都提高对真实下一个 token 的概率**。推理时才是根据当前序列逐 token 生成；训练时则用完整的真实序列进行并行的 teacher forcing。
+
+- **pad 位置为什么是 -100**：padding 是凑长度的人造 token，让模型学"预测 pad"毫无意义还会带偏，所以屏蔽。
+- **`ignore_index=-100` 的效果**：展平后的 1 万个位置里，pad 对应的位置直接被跳过，loss 只对有效 token 取平均。
+- **总损失 = 交叉熵 + aux_loss**。`aux_loss` 是 MoE 架构的负载均衡损失（让各专家被均匀使用），默认 Dense 架构（`use_moe=False`）下恒为 0，可以忽略。
+- 训练日志里的 `logits_loss` 就是纯交叉熵部分，是你观察学习曲线的核心指标：从 ~8.8（ln 6400，随机猜的水平）一路降到 2 左右即算健康。
+
+---
+
+### 7. 特殊 token 与聊天模板：预训练怎么用、不用什么
+
+这是容易混淆的地方，分清楚两个阶段：
+
+#### 7.1 预训练阶段：只用 bos / eos / pad
+
+预训练**不走聊天模板**。`PretrainDataset` 只做了 `[bos] + tokens + [eos]`。但注意一个巧妙设计：minimind 的 bos/eos **直接复用了 ChatML 的标记**：
+
+```
+bos = <|im_start|> (id=1)
+eos = <|im_end|> (id=2)
+```
+
+也就是说，预训练阶段模型已经见惯了 `<|im_start|>` 开头、`<|im_end|>` 结尾的序列。到 SFT 阶段拼对话时无需引入新 token——**词表和嵌入从预训练到对话是无缝衔接的**，这是沿用 Qwen/ChatML 体系的原因。
+
+#### 7.2 聊天模板长什么样（SFT 才启用）
+
+完整模板存在 `model/tokenizer_config.json` 的 `chat_template` 字段（Jinja 语法），由 `tokenizer.apply_chat_template()` 渲染。把
+
+```python
+[{"role": "system", "content": "你是minimind"},
+ {"role": "user", "content": "你好"},
+ {"role": "assistant", "content": "你好！有什么可以帮你？"}]
+```
+
+渲染成：
+
+```
+<|im_start|>system
+你是minimind<|im_end|>
+<|im_start|>user
+你好<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+你好！有什么可以帮你？<|im_end|>
+```
+
+要点：
+
+- 每轮对话用 `<|im_start|>角色\n ... <|im_end|>\n` 包裹——正是预训练时 bos/eos 的那两个 token。
+- assistant 回复带 `<think>...</think>` 思考段（模板固定插入，SFT 数据侧 `post_processing_chat` 会以 80% 概率把空思考段删掉，控制模型是否"显式思考"）。
+- 模板还内置了 tool_call / tool_response 的 XML 格式，供 Agent 训练用。
+- **SFT 与预训练的损失差别只在 labels**：`SFTDataset.generate_labels`（`lm_dataset.py:88`）在 token 流里扫描 `<|im_start|>assistant\n` 到 `<|im_end|>\n` 的区间，只保留这些区间的标签，其余全部置 -100——模型只学习"怎么当 assistant"，不学"怎么当 user"。而模型的 forward、移位交叉熵那一套完全不变。
+
+---
+
+### 8. 训练产物与验证
+
+```bash
+cd trainer && python train_pretrain.py
+```
+
+默认跑 2 个 epoch（约 8 万步 × 等效 batch 256 ≈ 1300 万条样本曝光）。产物：
+
+- `out/pretrain_768.pth` —— 基座模型权重。
+- 验证方式：`python eval_llm.py --weight pretrain`。此时的模型只会"接龙"不会"对话"——你问它问题，它大概率续写一段相关文本而不是回答，这是正常现象，对话能力要等 SFT 阶段注入。
+
+观察什么：
+
+- `loss` 从 ~8.8 单调下降（2 epoch 后大约到 2.x），不震荡发散；
+- `lr` 符合余弦曲线；
+- 生成文本通顺、有基本语法，但可能跑题、重复、不会停止。
+
+---
+
+### 9. 关键数字速查表
+
+| 项目 | 值 | 出处 |
+|---|---|---|
+| 数据量 | 1,270,238 条 jsonl | `dataset/pretrain_t2t_mini.jsonl` |
+| 数据格式 | `{"text": 纯文本}`，多段拼接 | 同上 |
+| max_seq_len | 340 token（≈500+ 汉字） | `train_pretrain.py:125` |
+| 词表 / bos / eos / pad | 6400 / 1 / 2 / 0 | `tokenizer_config.json` |
+| batch / 累积 / 等效 batch | 32 / 8 / 256 | `train_pretrain.py:114,119` |
+| 一个 epoch 步数 | ≈39,695 步 | 127万 ÷ 32 |
+| 学习率 | 5e-4，warmup+余弦（0.1lr ~ lr） | `trainer_utils.py:40` |
+| 模型 | 768 维 × 8 层，GQA 8/4，~64M 参数 | `model_minimind.py:38` |
+| 损失 | shift-by-one 交叉熵，ignore_index=-100 | `model_minimind.py:433` |
+| 精度 | bf16 autocast，fp32 主权重 | `train_pretrain.py:150` |
+| 保存 | 每 1000 步，权重 fp16 + 完整断点 | `train_pretrain.py:84` |
+
+---
+
+### 10. 一页纸回顾
+
+1. **数据**：127 万行 `{"text": ...}` 纯文本（多段拼接填满窗口），无标签——标签靠移位自监督构造。
+2. **处理**：分词 → 加 `<|im_start|>`/`<|im_end|>` → pad 到 340 → labels 克隆一份、pad 处置 -100。
+3. **加载**：每 epoch 重新洗牌 → `SkipBatchSampler` 切 32 条/批（支持断点跳过）→ 8 进程预取。
+4. **训练**：每步重算余弦 lr → bf16 前向 → 反传 → 攒 8 步裁剪更新一次（等效 batch 256）→ 每千步存权重和断点。
+5. **模型**：嵌入 → 8 层因果 Transformer → 共享权重的 lm_head → `(B, 340, 6400)` logits。
+6. **损失**：`logits[:, :-1]` 对 `labels[:, 1:]` 交叉熵——第 t 位预测第 t+1 个字，-100 处跳过。
+7. **模板**：预训练只用 bos/eos（恰好就是 `<|im_start|>/<|im_end|>`），聊天模板是 SFT 阶段才登场的同一套特殊 token 的"完整用法"。
+
+## 2. SFT
+
+### MiniMind SFT 微调完全指南
+
+> 承接《预训练完全指南》：基座模型只会"接龙"，SFT（Supervised Fine-Tuning，监督微调）教它"按聊天格式回答问题"。
+> 训练骨架与预训练几乎一模一样——**真正的变化全在数据侧**：对话格式、聊天模板、以及一张精细的 loss 掩码。
+>
+> 涉及文件：`dataset/sft_t2t_mini.jsonl`、`dataset/lm_dataset.py`（SFTDataset）、`trainer/train_full_sft.py`、`trainer/train_lora.py`、`model/model_lora.py`、`model/tokenizer_config.json`
+
+---
+
+### 0. 一句话理解 SFT 在干什么
+
+预训练模型学到的是"文本怎么续写"，它不知道"user 说完该 assistant 说了"、"答完该停了"。SFT 用对话数据继续训练同一个模型，做两件事：
+
+1. **格式对齐**：学会 `<|im_start|>user ... <|im_end|>` 之后轮到自己说话，说完输出 `<|im_end|>` 收尾。
+2. **行为对齐**：学会"回答"而不是"续写"——通过 loss 掩码，**只对 assistant 说的部分算损失**。
+
+数据流总览（与预训练管线对比着看）：
+
+```
+sft_t2t_mini.jsonl  ({"conversations": [{role, content}, ...]} × 90万行)
+        │
+        ▼  SFTDataset.__getitem__                  dataset/lm_dataset.py:106
+  conversations → 20%概率加system → apply_chat_template 渲染成字符串
+        → 80%概率删空<think> → tokenize → pad 到 768
+        → generate_labels：只保留 assistant 区间，其余 -100
+        │
+        ▼  DataLoader + SkipBatchSampler           （与预训练完全相同）
+        │
+        ▼  model(input_ids, labels)                （与预训练完全相同）
+  logits (B, 768, 6400) → shift-by-one 交叉熵（-100 处跳过）
+        │
+        ▼  反向传播 → AdamW → out/full_sft_768.pth
+```
+
+**核心认知：SFT 与预训练的模型、前向、损失函数代码完全一样，唯一区别是 labels 的构造方式。** 下面逐节展开。
+
+---
+
+### 1. SFT 数据长什么样
+
+文件：`dataset/sft_t2t_mini.jsonl`，共 **905,718 行**。每行一个 JSON，字段是 `conversations`——一个消息列表：
+
+```json
+{"conversations": [
+  {"role": "user", "content": "你背后的模型是哪个版本？它由谁开发？"},
+  {"role": "assistant", "content": "我是由jingyaogong开发的高效小参数AI模型。"},
+  {"role": "user", "content": "你模型的训练数据来源是什么？"},
+  {"role": "assistant", "content": "我的训练数据涵盖多领域……",
+   "reasoning_content": "好的，用户问我的模型训练数据来源。首先，我需要确认……"}
+]}
+```
+
+与预训练数据的对照：
+
+|       | 预训练             | SFT                                                 |
+| ----- | --------------- | --------------------------------------------------- |
+| 格式    | `{"text": 纯文本}` | `{"conversations": [...]}` 结构化对话                    |
+| 轮次    | 无轮次概念，多段语料拼接    | 单轮/多轮 user↔assistant 交替                             |
+| 可选字段  | 无               | `reasoning_content`（思考链）、`tools`/`tool_calls`（工具调用） |
+| 模型要学的 | 语言规律            | 对话格式 + 回答行为                                         |
+
+`reasoning_content` 是 assistant 的"内心思考"，渲染时会被包进 `<think>...</think>` 段——这就是让模型学会"先想后答"的数据基础。
+
+---
+
+### 2. 数据处理：对话 → (input_ids, labels)
+
+核心代码：`dataset/lm_dataset.py:58-119` 的 `SFTDataset`。`__getitem__` 四步：
+
+```python
+def __getitem__(self, index):
+    sample = self.samples[index]
+    conversations = pre_processing_chat(sample['conversations'])  # ① 20%概率加system
+    prompt = self.create_chat_prompt(conversations)               # ② 渲染聊天模板 → 字符串
+    prompt = post_processing_chat(prompt)                         # ③ 80%概率删空<think>
+    input_ids = self.tokenizer(prompt).input_ids[:self.max_length]  # ④ 分词+截断
+    input_ids += [self.tokenizer.pad_token_id] * (self.max_length - len(input_ids))  # pad 到 768
+    labels = self.generate_labels(input_ids)                      # ⑤ 生成 loss 掩码
+    return torch.tensor(input_ids), torch.tensor(labels)
+```
+
+#### ① 随机注入 system 提示（`pre_processing_chat`，lm_dataset.py:9）
+
+如果对话没有 system 轮，以 **20% 概率**从 10 条候选里随机挑一条插上（"你是minimind，一个小巧但有用的语言模型" 等）。这是**数据增强**：让模型对"有/无 system"两种输入都稳健，且不被单一 system 文案绑死。带 `tools` 的对话完整保留、不做处理。
+
+#### ② 渲染聊天模板（`create_chat_prompt`，lm_dataset.py:71）
+
+调 `tokenizer.apply_chat_template()`，用 `tokenizer_config.json` 里的 Jinja 模板把消息列表渲染成一个字符串。实测渲染结果：
+
+```python
+[{"role": "user", "content": "你好"},
+ {"role": "assistant", "content": "你好！有什么可以帮你？"}]
+```
+
+↓ 渲染后
+
+```
+<|im_start|>user
+你好<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+你好！有什么可以帮你？<|im_end|>
+```
+
+对照预训练文档的记忆：`<|im_start|>`(id=1) 和 `<|im_end|>`(id=2) 正是预训练阶段的 bos/eos——模型对这两个 token 早已熟悉，SFT 只是教它"这两个 token 之间的新语法"。模板细节：
+
+- 每轮 = `<|im_start|>` + 角色 + `\n` + 内容 + `<|im_end|>` + `\n`；
+- assistant 轮固定插入 `<think>\n{思考}\n</think>\n\n{回答}` 结构；没有 `reasoning_content` 时思考段为空；
+- 带工具的对话另有 `# Tools` 段和 `<tool_call>` XML 格式（Agent 训练用，SFT 主线可暂不深究）。
+
+#### ③ 随机删空思考段（`post_processing_chat`，lm_dataset.py:31）
+
+如果文本里有空思考段 `<think>\n\n</think>\n\n`，以 **80% 概率删掉**（即 20% 保留）。这让模型学会"有时显式思考、有时直接回答"，推理时可以通过提示词控制是否思考。
+
+#### ④ 分词、截断、pad
+
+整段渲染文本一次性分词，截断到 768（SFT 的 `max_seq_len` 比预训练的 340 长，因为对话需要上下文），再 pad 到 768。
+
+#### ⑤ 生成 labels：SFT 的灵魂（`generate_labels`，lm_dataset.py:88）
+
+```python
+self.bos_id = tokenizer(f'{tokenizer.bos_token}assistant\n').input_ids  # 实测 = [1, 1388, 570, 811, 234]
+self.eos_id = tokenizer(f'{tokenizer.eos_token}\n').input_ids           # 实测 = [2, 234]
+
+def generate_labels(self, input_ids):
+    labels = [-100] * len(input_ids)          # 先全部屏蔽
+    i = 0
+    while i < len(input_ids):
+        if input_ids[i:i+len(self.bos_id)] == self.bos_id:   # 找到 <|im_start|>assistant\n
+            start = i + len(self.bos_id)                      # assistant 内容起点
+            end = start
+            while end < len(input_ids):
+                if input_ids[end:end+len(self.eos_id)] == self.eos_id: break  # 找到 <|im_end|>\n
+                end += 1
+            for j in range(start, min(end+len(self.eos_id), self.max_length)):
+                labels[j] = input_ids[j]       # 只还原 assistant 区间（含结尾 <|im_end|>\n）
+            i = end + len(self.eos_id) ...
+        else:
+            i += 1
+    return labels
+```
+
+逻辑：**先把所有位置置为 -100（全不学习），再扫描 token 流，把每个 `<|im_start|>assistant\n` 到 `<|im_end|>\n` 的区间"解锁"**。用 ② 的例子（删掉空 think 后）实测逐 token 结果：
+
+```
+prompt: '<|im_start|>user\n你好<|im_end|>\n<|im_start|>assistant\n你好！有什么可以帮你？<|im_end|>\n'
+
+pos     id token            label      说明
+  0      1 '<|im_start|>'   -100       ┐
+  1    832 'us'             -100       │
+  2    311 'er'             -100       │ user 轮：全部屏蔽
+  3    234 '\n'             -100       │ 模型不需要学"怎么当用户"
+  4   1968 '你好'           -100       │
+  5      2 '<|im_end|>'     -100       │
+  6    234 '\n'             -100       ┘
+  7      1 '<|im_start|>'   -100       ┐ assistant 头 [1,1388,570,811,234]
+  8   1388 'ass'            -100       │ 也被屏蔽——它是"提示模型该说话了"的触发符，
+  9    570 'ist'            -100       │ 推理时由代码生成，不需要模型学
+ 10    811 'ant'            -100       │
+ 11    234 '\n'             -100       ┘
+ 12   1968 '你好'           '你好'     ┐
+ 13   1364 '！'             '！'       │
+ 14   4166 '有什么'         '有什么'   │ assistant 内容：学习！
+ 15    410 '可以'           '可以'     │
+ 16    703 '帮'             '帮'       │
+ 17    441 '你'             '你'       │
+ 18    776 '？'             '？'       │
+ 19      2 '<|im_end|>'     '<|im_end|>'│ 结尾也学 → 模型学会"说完就停"
+ 20    234 '\n'             '\n'       ┘
+ 21      0 '<|endoftext|>'  -100       pad：屏蔽（ignore_index）
+```
+
+三个设计意图：
+
+- **user 部分屏蔽**：模型只需要学"怎么回答"，不需要学"怎么提问"——否则训练目标里混入"预测用户问题"，浪费容量还可能让模型抢话。
+- **assistant 头部（`<|im_start|>assistant\n`）屏蔽**：这 5 个 token 是推理时由代码拼上的"触发符"，不属于模型要生成的内容。
+- **结尾 `<|im_end|>` 参与学习**：至关重要——模型学会在回答结束时主动输出 eos，推理时 `generate` 遇到 eos(id=2) 就停止。不学它，模型会没完没了地说下去。
+- **多轮对话**：`while` 循环扫描整段文本，**每个** assistant 区间都会解锁，一条多轮样本里所有回答都参与训练。
+
+#### ⑥ 带工具（tools / tool_calls）的数据：从原始 JSON 到训练
+
+前面 ② 提到"带工具的对话另有 `# Tools` 段和 `<tool_call>` XML 格式"，这里完整展开。SFT 数据中带 `tools` 字段的共 **84,832 行**、带 `tool_calls` 的共 **76,574 行**（约 8% 的数据），它们教模型学会"何时调工具、调哪个、传什么参数、拿到结果后怎么总结"——这是 Agent 能力的数据基础。
+
+**原始数据形状**（一行 JSON，三种特殊角色/字段）：
+
+```json
+{"conversations": [
+  {"role": "system", "content": "",
+   "tools": "[{\"function\": {\"name\": \"get_exchange_rate\", \"description\": \"查询两种货币之间的实时汇率\", \"parameters\": {...}}}, {\"function\": {\"name\": \"random_number\", ...}}]"},
+  {"role": "user", "content": "请随机生成一个1到100之间的数字，并查询美元对人民币的当前汇率"},
+  {"role": "assistant", "content": "生成1到100之间的随机数并查询当前美元对人民币汇率",
+   "tool_calls": "[{\"function\": {\"name\": \"random_number\", \"arguments\": \"{\\\"min\\\": 1, \\\"max\\\": 100}\"}}, {\"function\": {\"name\": \"get_exchange_rate\", \"arguments\": \"{\\\"from_currency\\\": \\\"USD\\\", \\\"to_currency\\\": \\\"CNY\\\"}\"}}]"},
+  {"role": "tool", "content": "{\"result\": 69}\n{\"from_currency\": \"USD\", \"to_currency\": \"CNY\", \"rate\": 7.21, ...}"},
+  {"role": "assistant", "content": "随机生成的数字是：69。\n美元对人民币的当前汇率是：1美元 = 7.21人民币。"}
+]}
+```
+
+三个要点：
+
+- **`tools` 挂在 system 轮上**：可用工具的"说明书"（函数名、描述、参数 schema），注意它是一个 **JSON 字符串**（引号套引号），`create_chat_prompt`（lm_dataset.py:76-77）会先 `json.loads` 解析出来再传给模板；
+- **`tool_calls` 挂在 assistant 轮上**：assistant 这一轮不直接回答，而是"发起工具调用"，同样是 JSON 字符串，需要 `json.loads`（lm_dataset.py:78-79）；
+- **`role: "tool"`**：工具执行后的返回结果，是一轮独立消息。
+
+**应用聊天模板后**（`apply_chat_template(messages, tools=tools)` 实测渲染结果）：
+
+```
+<|im_start|>system
+
+
+# Tools
+
+You may call one or more functions to assist with the user query.
+
+You are provided with function signatures within <tools></tools> XML tags:
+<tools>
+{"function": {"name": "get_exchange_rate", "description": "查询两种货币之间的实时汇率", ...}}
+{"function": {"name": "random_number", "description": "生成指定范围内的随机数", ...}}
+</tools>
+
+For each function call, return a json object with function name and arguments within <tool_call></tool_call> XML tags:
+<tool_call>
+{"name": <function-name>, "arguments": <args-json-object>}
+</tool_call><|im_end|>
+<|im_start|>user
+请随机生成一个1到100之间的数字，并查询美元对人民币的当前汇率<|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+生成1到100之间的随机数并查询当前美元对人民币汇率
+<tool_call>
+{"name": "random_number", "arguments": {"min": 1, "max": 100}}
+</tool_call>
+<tool_call>
+{"name": "get_exchange_rate", "arguments": {"from_currency": "USD", "to_currency": "CNY"}}
+</tool_call><|im_end|>
+<|im_start|>user
+<tool_response>
+{"result": 69}
+{"from_currency": "USD", "to_currency": "CNY", "rate": 7.21, "timestamp": "2024-04-05T10:30:00Z"}
+</tool_response><|im_end|>
+<|im_start|>assistant
+<think>
+
+</think>
+
+随机生成的数字是：69。  
+美元对人民币的当前汇率是：1美元 = 7.21人民币。<|im_end|>
+```
+
+模板做了四件事，每一件都值得记住：
+
+1. **工具说明书塞进 system**：`tools` 列表被包进 `<tools>...</tools>` XML，外加一段英文"使用说明"（告诉模型：要调用时输出 `<tool_call>{json}</tool_call>`）——模型是**靠读这段说明学会调用格式**的，没有任何特殊 token；
+2. **assistant 的 tool_calls → `<tool_call>` XML**：JSON 字符串被展开、美化，包进 `<tool_call>...</tool_call>`，就放在 assistant 正文后面。模型要学的"调工具"本质就是**学会输出这段 XML 文本**；
+3. **`role: "tool"` 被渲染成 user 轮**：工具结果包进 `<tool_response>...</tool_response>` 后，角色变成了 **user**——对模型来说"工具的回复"就是"用户又发来一条消息"。这是 Qwen 系模板的惯例；
+4. assistant 轮依然带 `<think>` 结构（空思考段照旧参与 ③ 的 80% 概率删除）。
+
+**怎么用它训练**：走完 ②③④ 的常规管线后，⑤ 的 `generate_labels` 按 `<|im_start|>assistant\n` → `<|im_end|>\n` 区间解锁 labels，于是工具数据的 loss 分布自然形成：
+
+| 区间 | 渲染后的角色 | 是否算 loss | 模型学到什么 |
+|---|---|---|---|
+| system 的 `<tools>` 说明书 | system | ❌ -100 | 不学（这是"输入"，每次任务不同） |
+| user 的提问 | user | ❌ -100 | 不学 |
+| assistant 的 `<tool_call>` 段 | assistant | ✅ 学 | **何时调、调哪个、传什么参数** |
+| `<tool_response>` 工具结果 | user（被模板改写） | ❌ -100 | **不学**——它是环境给的"观测"，不是模型生成的 |
+| assistant 的最终总结 | assistant | ✅ 学 | 拿到工具结果后**怎么组织语言回答** |
+
+这正是设计意图：**模型学"发起调用"和"消化结果"两个动作，不学"扮演工具"**。工具结果是外部世界的观测，让模型去预测它没有意义（还会浪费容量）。同时注意 `pre_processing_chat`（lm_dataset.py:11）对带 `tools` 的对话直接完整保留、不注入随机 system——说明书现场不能被干扰。
+
+---
+
+### 3. 数据加载与划分
+
+管线与预训练**完全相同**（`train_full_sft.py:158-168`）：每 epoch `randperm` 重洗 → `SkipBatchSampler` 切批（支持断点跳过）→ `DataLoader(num_workers=8, pin_memory=True)`。同样**没有划分验证集**。
+
+差异在默认超参（`train_full_sft.py:88-103`），每个差异都有原因：
+
+| 超参 | 预训练 | SFT | 为什么 |
+|---|---|---|---|
+| `from_weight` | `none`（从零） | `pretrain`（加载基座） | SFT 是"接着预训练继续训" |
+| `learning_rate` | 5e-4 | **1e-5**（小 50 倍） | 微调是"轻推"已学好的模型，lr 太大会把预训练学到的语言能力"冲掉"（灾难性遗忘） |
+| `batch_size` × 累积 | 32 × 8 = 256 | 16 × 1 = 16 | 对话样本长（768 vs 340），且微调不需要那么大的 batch |
+| `max_seq_len` | 340 | 768 | 多轮对话更长 |
+| `epochs` | 2 | 2 | — |
+| 每 epoch 步数 | ≈39,695 | ≈56,607（905,718 ÷ 16） | — |
+
+`init_model(lm_config, 'pretrain', ...)`（trainer_utils.py:119）加载 `out/pretrain_768.pth`——**这就是为什么必须先跑完预训练**。
+
+---
+
+### 4. 一个 epoch 里做什么
+
+`train_full_sft.py` 的 `train_epoch()` 与预训练版**逐行同构**：每步重算余弦 lr → bf16 autocast 前向 → `scaler.scale(loss).backward()` → 攒满 `accumulation_steps` 步后 unscale → 裁剪 → AdamW 更新 → 定期日志/保存 → 轮末收尾更新。断点续训、`SkipBatchSampler`、双份保存（`out/full_sft_768.pth` + `checkpoints/full_sft_768_resume.pth`）全部一样。
+
+对比两个文件你会发现：**SFT 脚本是预训练脚本复制后只改了默认参数、数据集类、初始权重**。这不是偷懒，而是一个重要认知——
+
+> 预训练与 SFT 在"优化"层面没有任何区别。它们都是同一个 next-token-prediction 任务，同一个 shift-by-one 交叉熵。区别全部在**数据里编码的任务定义**：纯文本教"接龙"，对话+掩码教"当助手"。
+
+---
+
+### 5. 输入输出：模型看到什么、产出什么
+
+输入 `(B=16, S=768)` 的 token id 矩阵——和预训练同一种张量，只是内容上，每行现在是一段**渲染好的 ChatML 对话文本**（含 `<|im_start|>`、角色名、`<think>` 段、pad）。
+
+前向完全相同：embed → 8 层因果 Transformer → lm_head → logits `(16, 768, 6400)`。模型本身没有任何"对话模块"，它自始至终只做一件事：给每个位置的下一个 token 打分。
+
+---
+
+### 6. SFT 的损失怎么算
+
+代码还是那三行（`model_minimind.py:433`）：
+
+```python
+x = logits[..., :-1, :].contiguous()      # 位置 t 的预测
+y = labels[..., 1:].contiguous()          # 对齐 token t+1
+loss = F.cross_entropy(x.view(-1, x.size(-1)), y.view(-1), ignore_index=-100)
+```
+
+配合第 2 节的逐 token 表，把"shift-by-one + 掩码"合起来看一个具体位置：
+
+```
+位置 11 的输入是 '\n'（assistant 头的最后一个 token）
+  → 它的 logits 负责预测位置 12 → labels[12] = '你好' ✓ 参与损失
+  → 即：模型看到 "<|im_start|>assistant\n" 时，要学习输出 "你好"
+
+位置 4 的输入是 '你好'（user 的问题）
+  → 它的 logits 负责预测位置 5 → labels[5] = -100 ✗ 被跳过
+  → 即：模型看完用户问题后"想输出 <|im_end|>"这件事，不算分
+```
+
+损失只在 assistant 区间内的有效 token 上取平均。一个 batch 16×767 ≈ 1.2 万个预测位置里，通常只有 assistant 回答占的那一小部分真正贡献梯度。
+
+#### 6.1 用一轮对话直观看 SFT 的 loss
+
+SFT 仍然是“预测下一个 token”，并没有换掉模型的交叉熵公式。变化在于：**只有 assistant 的回答 token 被保留为有效 label**。
+
+例如把对话简化成：
+
+```text
+<user> 你好 <assistant> 你好，有什么可以帮你？ <eos>
+```
+
+可以把 loss mask 直观地画成：
+
+```text
+token:       <user>  你好  <assistant>  你  好  ，  有什么可以帮你？  <eos>
+label mask:    0      0        0        1   1   1          1          1
+```
+
+实际实现中，mask 为 0 的位置会把 label 设为 `-100`：
+
+```text
+labels:      [-100, -100,  -100,    你,  好,  ，,  有什么可以帮你？, <eos>]
+```
+
+模型内部依然会做 shift：某个位置的 logits 负责预测下一个 token。因此，assistant 回答的第一个 token 也会参与 loss——它由 assistant 起始标记所在位置的 logits 预测；user 的内容和模板控制部分虽然仍会经过模型，但不会因为 `ignore_index=-100` 而产生训练梯度。
+
+例如模型对回答中的三个真实 token 给出的概率是 `0.8、0.5、0.1`，它们贡献的 loss 仍然是：
+
+```text
+-log(0.8)、-log(0.5)、-log(0.1)
+```
+
+只是 user 部分对应的 loss 被忽略，最后只对 assistant 有效 token 求平均。于是预训练教模型“所有文本如何续写”，SFT 则把训练重点改成“看到对话上下文后，assistant 应该如何回答”。
+
+与预训练损失的完整对照：
+
+| | 预训练 | SFT |
+|---|---|---|
+| 损失函数 | shift-by-one 交叉熵 | **同左，一模一样** |
+| labels 构造 | 克隆 input_ids，pad → -100 | 全 -100，仅 assistant 区间解锁 |
+| 每个样本的监督信号 | 几乎全部 token | 只有回答部分（可能只占 1/3） |
+| eos 参与损失？ | 是（文本结束符） | 是（更重要：决定模型何时闭嘴） |
+| aux_loss | MoE 时为负载均衡损失，Dense 为 0 | 同左 |
+
+---
+
+### 7. LoRA：只训 0.6% 参数的微调
+
+全量 SFT 要更新全部 64M 参数。LoRA（Low-Rank Adaptation）的假设是：**微调对权重的改变量 $\Delta W$ 是"低秩"的**——可以用两个小矩阵的乘积近似。代码在 `model/model_lora.py`，训练脚本 `trainer/train_lora.py`。
+
+#### 7.1 公式
+
+对一个原本做 `y = Wx` 的线性层（$W \in \mathbb{R}^{d \times d}$），LoRA 冻结 W，并联一条低秩支路：
+
+$$
+y = Wx + BAx \quad \text{其中}\quad A \in \mathbb{R}^{r \times d},\ B \in \mathbb{R}^{d \times r},\ r \ll d
+$$
+
+等效于：
+
+$$
+y = (W + \Delta W)x,\quad \Delta W = BA,\quad \operatorname{rank}(\Delta W) \le r
+$$
+
+d=768、r=16 时：原矩阵 768×768 = 589,824 参数 → LoRA 只学 768×16 + 16×768 = **24,576** 参数，压缩 24 倍。推理时可把 BA 加回 W（`merge_lora`），**零额外推理开销**。
+
+#### 7.2 代码逐段对照
+
+**LoRA 模块**（model_lora.py:6）——就是公式里的 A、B 两个 Linear：
+
+```python
+class LoRA(nn.Module):
+    def __init__(self, in_features, out_features, rank):
+        self.A = nn.Linear(in_features, rank, bias=False)   # A: 768→16
+        self.B = nn.Linear(rank, out_features, bias=False)  # B: 16→768
+        self.A.weight.data.normal_(mean=0.0, std=0.02)      # A 高斯初始化
+        self.B.weight.data.zero_()                          # B 全零初始化 ★
+    def forward(self, x):
+        return self.B(self.A(x))                            # BAx
+```
+
+★ **B 零初始化是精妙之处**：训练起点时 $BA = 0$，即 $\Delta W = 0$，改装后的模型与原始模型**逐点等价**——微调从"不破坏任何已有能力"的状态出发，梯度再慢慢把 B 拉离零。
+
+**挂载哪些层**（model_lora.py:21）：
+
+```python
+def apply_lora(model, rank=16):
+    for name, module in model.named_modules():
+        if isinstance(module, nn.Linear) and module.in_features == module.out_features:
+            ...  # 只命中"方阵"线性层
+```
+
+对照模型结构（`model_minimind.py:179-182`），768 维配置下每个 Transformer 层只有 **q_proj（768→768）和 o_proj（768→768）** 满足"in==out"：
+
+| 层 | 形状 | 命中？ |
+|---|---|---|
+| q_proj | 768→768 | ✅ |
+| k_proj / v_proj | 768→384（GQA 减半） | ❌ |
+| o_proj | 768→768 | ✅ |
+| gate/up_proj | 768→2432 | ❌ |
+| down_proj | 2432→768 | ❌ |
+| lm_head | 768→6400 | ❌ |
+
+共 2 层/块 × 8 块 = 16 个 LoRA 模块，总参数量 = 16 × 24,576 = **393,216 ≈ 0.39M，约占全模型的 0.6%**（训练时脚本会打印确认）。
+
+**monkey-patch 前向**（model_lora.py:26-32）——公式 `y = Wx + BAx` 的直接翻译：
+
+```python
+original_forward = module.forward
+def forward_with_lora(x, layer1=original_forward, layer2=lora):
+    return layer1(x) + layer2(x)      # Wx + BAx，并联相加
+module.forward = forward_with_lora    # 运行时替换 forward，不改模型类源码
+```
+
+（副作用：这种动态替换与 `torch.compile` 不兼容，所以 `train_lora.py:164` 会强制关掉 compile。）
+
+**冻结与优化器**（train_lora.py:140-152）：
+
+```python
+for name, param in model.named_parameters():
+    param.requires_grad = ('lora' in name)     # 非 LoRA 参数全部冻结
+optimizer = optim.AdamW(lora_params, lr=1e-4)  # 优化器只管理 0.39M 参数
+```
+
+反向传播照常穿过整个网络，但梯度只流向 A、B——**显存里不用为 64M 冻结参数存梯度和 AdamW 动量**，这是 LoRA 省显存的来源（也是它能在小显存上微调大模型的原因）。
+
+#### 7.3 训练与保存
+
+`train_lora.py` 的 epoch 循环与全量 SFT 依然同构，差异点：
+
+- `from_weight='full_sft'`——LoRA 通常站在**已完成 SFT** 的模型上做领域适配（默认数据 `lora_medical.jsonl` 即医疗领域例子）；
+- 默认 `epochs=10`（数据小，多过几遍）、`lr=1e-4`（LoRA 参数是随机初始化的，可以承受比 SFT 的 1e-5 更大的 lr）；
+- 保存时 `save_lora()`（model_lora.py:45）**只导出 LoRA 权重**（`out/lora_xxx_768.pth`，约 1.5MB），基座权重不落盘；
+- 使用：`load_lora()` 把 LoRA 权重挂回基座模型（先 `apply_lora` 再 load）；或 `merge_lora()`（model_lora.py:56）执行 $W \leftarrow W + B \cdot A$ 合并成一份完整权重，得到一个无 LoRA 痕迹的普通模型。
+
+> 注：原版 LoRA 论文里 $\Delta W$ 会乘缩放系数 $\alpha/r$，本实现省略了它（等效于 $\alpha = r$，缩放吸进学习率里），学习时知道有这个差异即可。
+
+---
+
+### 8. 训练产物与验证
+
+```bash
+cd trainer && python train_full_sft.py        # 全量 SFT
+cd trainer && python train_lora.py            # LoRA 领域微调
+```
+
+- 产物：`out/full_sft_768.pth`（全量）/ `out/lora_medical_768.pth`（仅 LoRA 权重）。
+- 验证：`python eval_llm.py`（默认加载 `full_sft`）。对比预训练模型，SFT 后的模型应该：按 `<|im_end|>` 正常停止、以"回答"而非"续写"的方式响应、多轮对话不跑题。
+- loss 观察：起点比预训练末期略高（数据分布变了），随后下降并稳定在低于预训练的水平；如果 loss 降不下去或回答退化，先检查 lr 是不是太大。
+
+---
+
+### 9. 关键数字速查表
+
+| 项目 | 值 | 出处 |
+|---|---|---|
+| 数据量 | 905,718 条对话 jsonl | `dataset/sft_t2t_mini.jsonl` |
+| 数据格式 | `{"conversations": [{role, content, reasoning_content?}]}` | 同上 |
+| system 注入概率 | 20%（10 条候选随机） | `lm_dataset.py:9` |
+| 空 think 删除概率 | 80% | `lm_dataset.py:31` |
+| assistant 触发符 | `<\|im_start\|>assistant\n` = `[1,1388,570,811,234]` | `lm_dataset.py:65` |
+| 轮结束符 | `<\|im_end\|>\n` = `[2,234]` | `lm_dataset.py:66` |
+| max_seq_len | 768 | `train_full_sft.py:100` |
+| batch / 累积 | 16 / 1 | `train_full_sft.py:89,94` |
+| 学习率 | 1e-5（预训练的 1/50） | `train_full_sft.py:90` |
+| 损失 | shift-by-one 交叉熵，仅 assistant 区间 | `model_minimind.py:433` |
+| LoRA rank / 命中层 | 16 / q_proj + o_proj × 8 层 | `model_lora.py:21` |
+| LoRA 参数量 | 0.39M（≈0.6%） | `train_lora.py:134` |
+| LoRA lr / epochs | 1e-4 / 10 | `train_lora.py:84,82` |
+
+---
+
+### 10. 一页纸回顾
+
+1. **数据**：`conversations` 对话列表，可带 `reasoning_content`（思考链）和 `tools`。
+2. **处理**：20% 加 system → `apply_chat_template` 渲染成 ChatML 字符串 → 80% 删空 think → 分词 pad 到 768 → `generate_labels` 全 -100、只解锁 assistant 回答区间（含结尾 `<|im_end|>`）。
+3. **加载**：与预训练同一套 `SkipBatchSampler` + DataLoader；batch 16，无验证集。
+4. **每个 epoch**：训练循环与预训练逐行同构——lr 余弦、bf16、裁剪、AdamW、双份保存。
+5. **输入输出**：同一模型，输入是渲染好的对话 token 流，输出 logits `(16, 768, 6400)`。
+6. **损失**：还是 shift-by-one 交叉熵；**SFT 的全部魔法在 labels 掩码**——只让"回答"计分，模型于是学会当助手、学会说完就停。
+7. **LoRA**：冻结 W，并联学 $\Delta W = BA$（$r=16$，B 零初始化 ⇒ 起点零扰动），只挂在方阵线性层（q_proj/o_proj），只训 0.39M 参数、只存 LoRA 权重，`merge_lora` 可把 BA 并回 W。
+
+## 3. RL
+
+### MiniMind 强化学习完全指南（DPO / PPO / GRPO）
+
+> 承接《预训练完全指南》《SFT微调完全指南》。SFT 教模型"模仿标准答案"，强化学习阶段则教模型"分辨好坏"——用奖励信号把模型往"人类/AI 更偏好"的方向推。
+> 本仓库实现了三条路线：**DPO**（离线偏好对，无采样）、**PPO**（在线采样 + 价值网络）、**GRPO**（在线采样 + 组内相对比较，无价值网络）。
+>
+> 涉及文件：`dataset/dpo.jsonl`、`dataset/rlaif.jsonl`、`dataset/lm_dataset.py`（DPODataset / RLAIFDataset）、`trainer/train_dpo.py`、`trainer/train_ppo.py`、`trainer/train_grpo.py`、`trainer/rollout_engine.py`、`trainer/trainer_utils.py`（LMForRewardModel）
+
+---
+
+### 0. 总览：三种方法解决同一个问题
+
+SFT 之后模型会说话了，但只能说"像训练数据那样说"。它还分不清两个都能说通的回答哪个更好。强化学习阶段的统一目标是：
+
+> **最大化奖励（好回答加分），同时不偏离 SFT 模型太远（KL 约束，防"学坏"/遗忘）。**
+
+三种方法的分歧在于"奖励信号从哪来、怎么变成梯度"：
+
+|             | DPO                       | PPO                  | GRPO                |
+| ----------- | ------------------------- | -------------------- | ------------------- |
+| 数据          | 离线偏好对（chosen vs rejected） | 只有 prompt，在线采样回答     | 同 PPO               |
+| 需要采样生成？     | ❌ 不用                      | ✅ 每步生成               | ✅ 每步生成（每 prompt 多条） |
+| 奖励来源        | 偏好标签隐含                    | 奖励模型 + 规则            | 奖励模型 + 规则           |
+| 价值网络 Critic | 无                         | **有**（第二个模型）         | 无（用组内均值当基线）         |
+| 参考模型 ref    | 有（冻结）                     | 有（冻结）                | 有（冻结）               |
+| 显存常驻模型      | 2 个                       | **4 个**              | 3 个                 |
+| 学习率量级       | 4e-8（极小）                  | 3e-7                 | 3e-7                |
+| 一句话         | 把偏好学习变成纯监督式二分类            | 经典 RL：打分 → 优势 → 裁剪更新 | 同一题答 6 次，组内比高低      |
+
+共同的 KL 约束思想：三种方法里都出现一个**冻结的参考模型（ref_model，就是 SFT 模型本身的副本）**，用来惩罚策略模型"跑偏"。
+
+---
+
+### 1. 数据长什么样
+
+#### 1.1 DPO 数据：偏好对
+
+`dataset/dpo.jsonl`，共 **17,166 行**，每行是一对"同一个 prompt 下的好回答与差回答"：
+
+```json
+{"chosen":   [{"role": "user", "content": "continue"},
+              {"role": "assistant", "content": "好的回答……"}],
+ "rejected": [{"role": "user", "content": "continue"},
+              {"role": "assistant", "content": "差的回答……"}]}
+```
+
+- `chosen` 和 `rejected` 的**前缀（user 部分）相同**，只有最后的回答不同。
+- 数据来自人类标注或更强模型的偏好排序，**训练时不需要采样、不需要奖励模型**——偏好信息已经凝结在这一对数据里。这是 DPO 的最大卖点。
+
+#### 1.2 PPO / GRPO 数据：只有 prompt
+
+`dataset/rlaif.jsonl`，共 **19,502 行**，格式和 SFT 一样是 `conversations`，但用法完全不同——**只用对话的"问题部分"，assistant 的回答被丢掉**，因为回答要由模型自己现场生成（`RLAIFDataset`，lm_dataset.py:195）：
+
+```python
+def create_chat_prompt(self, conversations):
+    conversations = pre_processing_chat(conversations)         # 20% 概率加 system（同 SFT）
+    use_thinking = random.random() < self.thinking_ratio       # 90% 概率开启思考模式
+    return self.tokenizer.apply_chat_template(
+        conversations[:-1],              # ★ 丢掉最后一条 assistant 回答
+        tokenize=False,
+        open_thinking=use_thinking,
+        add_generation_prompt=True       # ★ 末尾补上 <|im_start|>assistant\n，等模型接话
+    )
+
+def __getitem__(self, index):
+    return {'prompt': prompt, 'answer': ""}    # answer 留空：答案由模型自己写
+```
+
+渲染出的 prompt 形如 `<|im_start|>user\n...<|im_end|>\n<|im_start|>assistant\n<think>\n`（开思考时），模型从这个"话头"开始自由生成。
+
+#### 1.3 奖励从哪来：奖励模型 + 规则奖励
+
+PPO/GRPO 每一步都要给模型生成的回答打分，打分器有两部分（`train_ppo.py:51` / `train_grpo.py:37` 的 `calculate_rewards`，两者几乎相同）：
+
+**① 外部奖励模型** `LMForRewardModel`（trainer_utils.py:160）：加载一个专门的打分模型（默认 `internlm2-1_8b-reward`，注意它比 64M 的 minimind 大 30 倍），输入对话历史+回答，输出一个分数，**裁剪到 [-3, +3]**。
+
+**② 规则奖励**（硬编码的可验证信号）：
+
+| 规则                               | 加分             |
+| -------------------------------- | -------------- |
+| 回答长度在 [20, 800] 字符               | +0.5，否则 -0.5   |
+| 思考段 `</think>` 前的内容长度在 [20, 300] | +1.0，否则 -0.5   |
+| `</think>` 恰好出现 1 次              | +0.25，否则 -0.25 |
+| 3-gram 重复惩罚 `rep_penalty`        | 最多扣 0.5        |
+
+规则奖励防"刷分"：没有长度约束模型会越说越长或越说越短，没有重复惩罚模型会车轱辘话循环——这些都是只依赖奖励模型时典型的 reward hacking。
+
+#### 1.4 Agent RL 数据：带 tools 和 gt 的多轮工具调用
+
+`rlaif.jsonl` 本身**不含工具**（实测 19,502 行中无一行有 `tools` 字段），PPO/GRPO 训的是纯对话。工具调用的强化学习由 `trainer/train_agent.py` 单独负责，数据是 `dataset/agent_rl.jsonl`（ModelScope `gongjy/minimind_dataset`，约 82MB）。
+
+**实测数据概况**（39,988 行）：
+
+| 类别                     | 行数         | 说明                      |
+| ---------------------- | ---------- | ----------------------- |
+| 带 tools + gt 的工具样本     | **20,000** | Agent RL 的主角，奖励走"可验证"路线 |
+| 纯对话样本（无 tools、gt 为空列表） | 19,988     | 和普通 GRPO 一样走奖励模型 + 规则奖励 |
+
+也就是说这个文件是**混合数据集**：一半训工具调用，一半保持通用对话能力（防止训工具把对话能力训丢）。20,000 条工具样本的几个实测事实：
+
+- 每条都以 `system` 轮开头（`content` 为空，`tools` 字段挂工具说明书 JSON 字符串）；
+- 最后一条**必然是 `content` 为空的 assistant 消息**（占位符，训练时被丢掉，真正的回答由模型现场生成）；
+- 有 10,000 条在工具问题之前还带了**多轮无关对话前缀**（测模型在长上下文中不忘调工具）；
+- `gt` 是字符串列表，**元素个数 1~6 个**（分布：1个→7,378 条，2个→5,569，3个→3,577，4个→1,839，5个→824，6个→813），对应"这道题需要调几个工具/答出几个值"。
+
+**真实样本**（精简过，注意最后那个空的 assistant）：
+
+```json
+{"conversations": [
+   {"role": "system", "content": "",
+    "tools": "[{\"type\": \"function\", \"function\": {\"name\": \"calculate_math\", \"description\": \"计算数学表达式的结果，支持加减乘除、幂运算\", \"parameters\": {...需要 expression 参数...}}}]"},
+   {"role": "user", "content": "……（前面可能有多轮无关对话）……"},
+   {"role": "assistant", "content": "……"},
+   {"role": "user", "content": "Compute 2045*6994 for me"},
+   {"role": "assistant", "content": ""}
+ ],
+ "gt": ["14302730"]}
+```
+
+工具全集恰好 6 个，与 `train_agent.py` 里模拟执行的工具一一对应：`calculate_math`（算数）、`unit_converter`（单位换算）、`get_current_weather`（天气）、`get_current_time`（时间）、`get_exchange_rate`（汇率）、`translate_text`（翻译）——全是本地假数据，保证训练可复现、无需联网。
+
+`AgentRLDataset`（lm_dataset.py:226）的处理和 RLAIFDataset 同构：`parse_conversations` 把 `tools` 从 system 轮里 `json.loads` 解析出来、丢掉最后一条（空的）assistant 消息当前缀，每条样本返回 `{'messages': 前缀, 'tools': 工具列表, 'gt': 标准答案}`（lm_dataset.py:252）。**gt 不参与模型输入，只用于最后打分**——它是"可验证奖励"（verifiable reward）的答案来源，比如上面这条的 gt `14302730` 就是 2045×6994 的正确结果。
+
+**训练时数据怎么流动**（`rollout_single`，train_agent.py:98-157）：这是一次**多轮 rollout**，模型和环境（工具）交替对话，最多 3 轮：
+
+```
+messages(前缀) + tools
+  → apply_chat_template(..., add_generation_prompt=True) 渲染成 prompt
+  → 模型生成：可能直接回答，也可能输出 <tool_call>{json}</tool_call>
+  → parse_tool_calls 解析 XML → execute_tool 执行（6个本地模拟工具：算数/换算/天气/时间/汇率/翻译，全假数据）
+  → 结果作为 {"role": "tool", "content": ...} 追加回 messages
+  → 重新渲染模板（tool 结果再次被包成 user 轮的 <tool_response>）→ 模型继续生成
+  → 直到不再调用工具（给出最终答案）或达到轮数上限
+```
+
+关键工程细节：**拼接序列时给每段打 mask**——模型自己生成的 token `response_mask=1`（参与 loss），而模板重新渲染时新增的"工具结果"部分（`obs_delta`，train_agent.py:149-152）`response_mask=0`、logp 记 0。这与 SFT 里"`<tool_response>` 不算 loss"是同一思想：**工具返回的 token 是环境观测，不是模型的动作，既不给奖励也不给梯度**。
+
+**奖励怎么算**（`calculate_rewards`，train_agent.py:188-239）：有工具调用时不再依赖奖励模型，而是用 gt 做**规则化可验证奖励**：
+
+| 信号                                                   | 加减分                  |
+| ---------------------------------------------------- | -------------------- |
+| 合法调用数与 `len(gt)` 对齐                                  | 每差 1 个扣 0.5（乱调/漏调都罚） |
+| 最终答案文本命中 gt 元素（`validate_gt_in_text`：字符串包含 或 数字近似相等） | +2.5 × 命中率           |
+| 达到轮数上限还没答完                                           | -0.5                 |
+| 总分                                                   | clip 到 [-3, 3]       |
+
+之后的更新与 GRPO 完全同构：同一 prompt 采 `num_generations` 条轨迹 → 组内归一化算 advantage → cispo/grpo loss + β·KL（train_agent.py:314-333）。可以把它理解为"**GRPO 的环境从单轮对话换成了多轮工具交互，奖励从'AI 评委打分'换成了'任务成败判定'**"。
+
+---
+
+### 2. DPO：把偏好学习变成监督式损失
+
+#### 2.1 原理与公式
+
+标准 RLHF 要解的问题是：在 KL 约束下最大化奖励
+
+$$
+\max_{\pi}\ \mathbb{E}\left[r(x,y)\right] - \beta \cdot \mathrm{KL}\left(\pi \,\big\|\, \pi_{\text{ref}}\right)
+$$
+
+DPO 论文的关键洞察：这个带约束的最优化问题有**闭式解**——最优策略满足 $r(x,y) = \beta \cdot \log\big[\pi(y|x) / \pi_{\text{ref}}(y|x)\big] + \text{const}$。于是奖励可以用"策略与参考模型的对数概率比"隐式表达，再代入 Bradley-Terry 偏好模型（chosen 优于 rejected 的概率 $= \sigma(r_{\text{chosen}} - r_{\text{rejected}})$），直接得到损失：
+
+$$
+\mathcal{L}_{\text{DPO}} = -\log\sigma\Big(\beta \cdot \big[\underbrace{\big(\log\pi(y_c|x) - \log\pi(y_r|x)\big)}_{\text{策略模型的偏好差 }\pi_{\text{logratio}}} - \underbrace{\big(\log\pi_{\text{ref}}(y_c|x) - \log\pi_{\text{ref}}(y_r|x)\big)}_{\text{参考模型的偏好差}}\big]\Big)
+$$
+
+直觉：**只要策略模型对 chosen 相对 rejected 的"偏爱程度"超过参考模型的偏爱程度，损失就下降**。β 控制允许偏离 ref 多远：β 大 → 紧贴 ref，保守；β 小 → 大胆追偏好，但容易跑偏。
+
+用一个极简数字例子看 DPO 的 loss。假设同一个问题下：
+
+```text
+chosen   = “答案 A”
+rejected = “答案 B”
+```
+
+策略模型和参考模型对两条回答的序列 log probability 分别为：
+
+```text
+策略模型：log π(chosen) = -2，log π(rejected) = -3
+参考模型：log πref(chosen) = -2.5，log πref(rejected) = -2.8
+```
+
+那么：
+
+```text
+策略模型的偏好差 = -2 - (-3)       = 1.0
+参考模型的偏好差 = -2.5 - (-2.8)    = 0.3
+logits             = 1.0 - 0.3       = 0.7
+```
+
+如果 `beta=0.15`，则：
+
+```text
+loss = -log(sigmoid(0.15 × 0.7)) ≈ 0.64
+```
+
+训练会继续推动策略模型相对更偏爱 `chosen`。如果策略模型反而更偏爱 `rejected`，`logits` 会变小甚至为负，DPO loss 就会变大。这里没有像预训练/SFT 那样指定每个位置唯一的“正确 token”；DPO 比较的是两条完整回答的相对概率。回答内部的 token logprob 仍然是通过 `gather` 取出并累加的，但最终优化目标是 chosen 与 rejected 的偏好差。
+
+#### 2.2 数据处理（DPODataset，lm_dataset.py:122）
+
+```python
+def __getitem__(self, index):
+    chosen_prompt   = tokenizer.apply_chat_template(sample['chosen'],   ...)  # 渲染成 ChatML 文本
+    rejected_prompt = tokenizer.apply_chat_template(sample['rejected'], ...)
+    # 80% 概率删空 think（与 SFT 相同的后处理）
+    chosen_encoding   = tokenizer(chosen_prompt,   truncation=True, max_length=1024, padding='max_length')
+    rejected_encoding = tokenizer(rejected_prompt, ...)
+    chosen_loss_mask = self.generate_loss_mask(chosen_input_ids)   # 与 SFT 同款：只标 assistant 区间
+    # ★ 注意：这里在数据侧就做了 shift！与 SFT/预训练（模型内部 shift）不同
+    x_chosen = tensor(chosen_input_ids[:-1])    # 输入：去掉最后一个 token
+    y_chosen = tensor(chosen_input_ids[1:])     # 标签：去掉第一个 token
+    mask_chosen = tensor(chosen_loss_mask[1:])  # 掩码同步右移
+    ...
+```
+
+- `generate_loss_mask`（lm_dataset.py:176）与 SFT 的 `generate_labels` 同一逻辑：扫描 `<|im_start|>assistant\n` → `<|im_end|>\n` 区间置 1，其余置 0——**只有回答部分的 logprob 计入偏好比较**，问题部分不该影响"哪个回答好"。
+- 移位在数据侧做完后，训练时 forward **不传 labels**，而是手动 gather logprob（见下）。
+
+#### 2.3 损失计算（train_dpo.py:25-50）
+
+```python
+def logits_to_log_probs(logits, labels):
+    log_probs = F.log_softmax(logits, dim=2)
+    return torch.gather(log_probs, dim=2, index=labels.unsqueeze(2)).squeeze(-1)
+    # 从 (B, S, 6400) 的 log 概率中取出"实际出现的那个 token"的 logprob → (B, S)
+
+def dpo_loss(ref_log_probs, policy_log_probs, mask, beta):
+    ref_log_probs    = (ref_log_probs    * mask).sum(dim=1)   # mask 只留 assistant 区间，
+    policy_log_probs = (policy_log_probs * mask).sum(dim=1)   # sum 起来 = log π(y|x) 整句对数概率
+    # batch 前半是 chosen，后半是 rejected（训练循环里 cat 出来的）
+    pi_logratios  = chosen_policy - reject_policy     # log π(y_c) - log π(y_r)
+    ref_logratios = chosen_ref    - reject_ref        # log π_ref(y_c) - log π_ref(y_r)
+    logits = pi_logratios - ref_logratios             # 两个"偏好差"之差
+    loss = -F.logsigmoid(beta * logits)               # = -log σ(β·logits)，即公式本身
+    return loss.mean()
+```
+
+代码与 2.1 的公式逐符号对应。
+
+#### 2.4 一个 epoch 做什么（train_dpo.py:53）
+
+```
+取 batch（B=4 对）
+  ├─ x = cat([x_chosen, x_rejected])     # 拼成 8 条一次前向，省一半时间
+  ├─ ref_model(x)   [no_grad，冻结] → ref_log_probs
+  ├─ model(x)       [可训练]        → policy_log_probs
+  ├─ dpo_loss(...) + aux_loss → backward
+  └─ 裁剪 → AdamW → 每 100 步保存
+```
+
+训练循环骨架（lr 调度 / bf16 / 保存 / 断点）与前两阶段一致。值得注意的超参（train_dpo.py:135-152）：
+
+- **`learning_rate=4e-8`，极小**（SFT 的 1/250）：偏好学习信号很"薄"，lr 稍大就会冲垮 SFT 学好的能力（代码注释明确写"建议 `<=5e-8` 避免遗忘"）。
+- `from_weight='full_sft'`：策略模型和 ref 模型都从 SFT 权重初始化——**ref 就是"SFT 快照"**。
+- `beta=0.15`，`max_seq_len=1024`，`epochs=1`：DPO 数据少（1.7 万对）、信号强，一遍就够，多了过拟合。
+
+---
+
+### 3. PPO：经典四模型在线强化学习
+
+DPO 是"离线"的：数据训前定死。PPO 是"在线"的：**每步都先让当前模型自己生成回答（rollout），打分，然后立刻学**。这带来一个本质困难——文本生成是逐 token 的序列决策，奖励却只有整句一个分，**怎么把总分摊到每个 token 上？** PPO 的答案是训练一个价值网络（Critic）。 
+
+#### 3.1 四个模型同时驻留显存（train_ppo.py:380-391）
+
+| 角色 | 是什么 | 训练？ |
+|---|---|---|
+| **Actor**（策略模型） | 从 `full_sft` 加载的 minimind | ✅ 学 |
+| **Critic**（价值网络） | 同上主干，但 lm_head 换成 `Linear(768→1)` | ✅ 学 |
+| **Ref**（参考模型） | SFT 快照 | ❌ 冻结，算 KL |
+| **Reward**（奖励模型） | internlm2-1_8b-reward | ❌ 冻结，打分 |
+
+Critic 的构造（train_ppo.py:36）：
+
+```python
+class CriticModel(MiniMindForCausalLM):
+    def __init__(self, params):
+        super().__init__(params)
+        self.value_head = nn.Linear(params.hidden_size, 1)  # 每个位置输出一个"价值分"
+
+    def forward(self, input_ids, attention_mask=None, **kw):
+        outputs = self.model(input_ids=input_ids, ...)
+        values = self.value_head(self.model.norm(outputs[0])).squeeze(-1)  # (B, S)
+        return values
+```
+
+Critic 从 SFT 权重加载（`strict=False`，value_head 随机初始化），它的职责是回答："**在这个 token 位置，预期最终能拿多少奖励？**"记作 $V(s_t)$。
+
+#### 3.2 一个训练步的完整流程
+
+**第①步 Rollout（rollout_engine.py:64）**：用当前 Actor 对每个 prompt 采样生成（temperature=0.8），返回完整 token 序列、回答段、以及**生成时每个 token 的 logprob（`old_per_token_logps`）**。`rollout_engine` 是可插拔的：`torch` 模式直接用模型自带的 `generate`；`sglang` 模式把生成卸载到独立的推理服务（权重通过 `update_policy` 落盘同步），大幅加速采样。
+
+**第②步 打分**：`calculate_rewards` 给每个回答一个总分 r（奖励模型 + 规则，见 1.3）。
+
+**第③步 GAE：把总分摊成每个 token 的优势（train_ppo.py:135-146）**
+
+先把整句奖励放到**回答的最后一个 token**上（中间 token 的外部奖励为 0），然后从后往前递归：
+
+$$
+\begin{aligned}
+\delta_t &= r_t + \gamma \cdot V(s_{t+1}) - V(s_t) && \text{TD 误差：实际比预期好多少}\\
+A_t &= \delta_t + \gamma\lambda \cdot A_{t+1} && \text{GAE：把未来的 } \delta \text{ 指数衰减地累加回来}
+\end{aligned}
+$$
+
+```python
+for t in reversed(range(gen_len)):
+    nv = old_resp_values[:, t + 1] if t < gen_len - 1 else 0.0
+    delta = token_rewards[:, t] + args.gamma * nv - old_resp_values[:, t]
+    lastgaelam = delta + args.gamma * args.lam * lastgaelam
+    advs_rev.append(lastgaelam)
+advantages = torch.stack(advs_rev[::-1], dim=1)
+returns = advantages + old_resp_values        # 价值网络的学习目标
+```
+
+直觉：$A_t > 0$ 表示"走到这一步比 Critic 预期的好"，该 token 该被鼓励；$A_t < 0$ 则该被压制。$\gamma = 1.0$（文本任务不折扣未来）、$\lambda = 0.95$（在偏差与方差间折中）。之后对 advantages 做 batch 内标准化（减均值除标准差）。
+
+**第④步 PPO 更新（train_ppo.py:163-247）**：同一批 rollout 数据**重复训练 `ppo_update_iters=2` 轮**，每轮把 batch 拆成 mini-batch：
+
+$$
+\text{ratio} = \exp(\text{mb\_resp\_logp} - \text{old\_resp\_logp}) \qquad \pi_\theta / \pi_{\text{old}}\ \text{，当前策略比"采样时"变化了多少}
+$$
+
+$$
+\begin{aligned}
+\text{policy\_loss} &= \max\big(-A \cdot \text{ratio},\ -A \cdot \text{clip}(\text{ratio},\ 1-\varepsilon,\ 1+\varepsilon)\big) + \text{kl\_coef} \cdot \mathrm{KL}_{\text{ref}}\\
+\text{value\_loss} &= 0.5 \cdot \max\big((V - R)^2,\ (\text{clip}(V,\ V_{\text{old}} \pm 0.2) - R)^2\big)
+\end{aligned}
+$$
+
+这对应 PPO 论文的 clipped surrogate 目标：
+
+$$
+\mathcal{L}_{\text{clip}} = \mathbb{E}\big[\min\big(\text{ratio} \cdot A,\ \text{clip}(\text{ratio},\ 1-\varepsilon,\ 1+\varepsilon) \cdot A\big)\big] \qquad \varepsilon = 0.2
+$$
+
+- **为什么要 clip**：ratio 衡量"更新后的策略与采样时策略"的差异。若不加约束，一个高优势 token 会被无限放大概率，几步就训崩。clip 把 ratio 锁在 [0.8, 1.2]——**每次更新只许小步走**，这是 "Proximal"（近端）的含义。代码里用 `max(-A·ratio, -A·clip(ratio))` 等价实现 `min` 目标（负号把 min 翻成 max）。
+- **value_loss 也 clip**（`cliprange_value=0.2`）：防止 Critic 单步更新过猛，估计值剧烈抖动。
+- **KL 惩罚**（`kl_coef=0.02`）：$\exp(x) - x - 1$（$x = \log \pi_{\text{ref}} - \log \pi$）是 KL 散度的 k3 无偏估计，恒非负。它把 Actor 拴在 ref 附近。
+- **早停**（`early_stop_kl=0.25`）：若 $\mathrm{approx\_KL} = \frac{1}{2} \cdot (\mathrm{log\_ratio})^2$ 超阈值，说明本批数据已被"榨干"（策略离采样点太远），剩余 ppo_epoch 的 loss 乘 0 只走通信不更新（DDP 下不能直接 break，否则各卡死锁——注释里专门写了这个坑）。
+
+用一个 token 直观看 PPO 的策略 loss：假设某个生成 token 的优势是 `A=+2`，说明这个 token 所在的回答比预期好；更新前后它的概率比为：
+
+```text
+ratio = π当前(token) / π旧(token) = 1.1
+```
+
+那么 `ratio × A = 2.2`，优化器会倾向于提高这个 token 在类似上下文中的概率。如果 `A=-2`，方向就相反，模型会压低它的概率。若 `ratio` 变成 `1.8`，已经超过 `1+epsilon=1.2`，PPO 会用 clip 后的 `1.2`，限制这次更新的影响，避免一次把某种行为的概率推得太高。
+
+因此 PPO 的 loss 信号不是“这个位置必须预测某个数据集 token”，而是：**这次模型自己生成的 token/回答拿到的结果比预期好还是坏，以及当前策略是否偏离旧策略和参考模型太远**。PPO 最终同时训练 Actor 的 policy loss 和 Critic 的 value loss。
+
+**第⑤步 两个优化器**：`actor_optimizer` 和 `critic_optimizer` 各自 AdamW、各自 `CosineAnnealingLR`，同一步里先后 step。
+
+#### 3.3 输入输出是什么
+
+- 模型输入：prompt+回答的完整序列 `(B, P+R)`，和 SFT 一样的 token 流；
+- Actor 输出：logits → gather 出回答段每个 token 的 logprob；
+- Critic 输出：每个位置一个标量 $V(s)$；
+- 损失 = $\text{policy\_loss} + 0.5 \cdot \text{value\_loss}$（+aux）。
+
+---
+
+### 4. GRPO：扔掉 Critic，用"组内比较"替代
+
+PPO 的痛点：Critic 是第二个要训练的模型，显存翻倍、调参翻倍，而且价值估计本身经常学不准。**GRPO（DeepSeek 提出）的洞察：同一道题让模型答 N 次，用这 N 个回答的平均奖励当基线——不需要 Critic。**
+
+#### 4.1 原理与公式
+
+对每个 prompt 采样 G 个回答（本仓库 `num_generations=6`），各自拿奖励 $r_1, \dots, r_G$，优势就是"比组内平均好多少、按组内离散度标准化"：
+
+$$
+A_i = \frac{r_i - \operatorname{mean}(r_1, \dots, r_G)}{\operatorname{std}(r_1, \dots, r_G) + 10^{-4}}
+$$
+
+目标函数在 PPO clip 的基础上加 per-token KL：
+
+$$
+\mathcal{L}_{\text{GRPO}} = -\mathbb{E}\big[\min\big(\text{ratio} \cdot A,\ \text{clip}(\text{ratio},\ 1-\varepsilon,\ 1+\varepsilon) \cdot A\big) - \beta \cdot \mathrm{KL}_{\text{token}}\big]
+$$
+
+代码（train_grpo.py:121-143）：
+
+```python
+grouped_rewards = rewards.view(-1, args.num_generations)            # [B, 6]
+mean_r = grouped_rewards.mean(dim=1).repeat_interleave(...)         # 组内均值
+std_r  = grouped_rewards.std(dim=1, unbiased=False).repeat_interleave(...)
+advantages = (rewards - mean_r) / (std_r + 1e-4)                    # ★ 组内标准化即优势
+
+kl_div = ref_per_token_logps - per_token_logps
+per_token_kl = torch.exp(kl_div) - kl_div - 1                       # KL 的 k3 估计（同 PPO）
+ratio = torch.exp(per_token_logps - old_per_token_logps)
+
+if args.loss_type == "cispo":     # 默认！CISPO 变体（MiniMax 提出）
+    clamped_ratio = torch.clamp(ratio, max=args.epsilon_high).detach()
+    per_token_loss = -(clamped_ratio * advantages * per_token_logps - beta * per_token_kl)
+else:                              # 经典 GRPO（PPO 式 clip）
+    clipped_ratio = torch.clamp(ratio, 1 - eps, 1 + eps)
+    per_token_loss = -(min(ratio*A, clipped_ratio*A) - beta * per_token_kl)
+
+policy_loss = ((per_token_loss * completion_mask).sum(1) / completion_mask.sum(1)).mean()
+```
+
+两种 loss 的差别：
+
+- **grpo 模式**：与 PPO 相同的双边 clip，ratio 超出 [0.8, 1.2] 的部分梯度被砍掉；
+- **cispo 模式**（默认）：不做 min/max 取舍，而是把 ratio **截断到上界 5.0 后 detach（只当权重、不传梯度），乘在 log π 上**——相当于"按重要性加权、但只拉 logprob 本身"，更新更温和，对长链思考任务更稳。
+
+注意聚合方式：`sum(1)/mask.sum(1)` 先在**每条回答内取平均**，再对 batch 取 mean——长回答和短回答权重相等，避免长文本主导梯度。
+
+用同一道题的 3 个回答直观看 GRPO 的优势：
+
+```text
+回答 1 的 reward = 3
+回答 2 的 reward = 1
+回答 3 的 reward = 2
+组内平均 reward  = 2
+```
+
+忽略标准差归一化时，三条回答的相对优势就是：
+
+```text
+A1 =  3 - 2 =  1   → 鼓励回答 1 的生成 token
+A2 =  1 - 2 = -1   → 压低回答 2 的生成 token
+A3 =  2 - 2 =  0   → 基本不调整回答 3
+```
+
+实际代码还会除以组内标准差，让优势具有更稳定的尺度。`completion_mask` 只保留模型生成的回答部分，所以 prompt、padding，以及环境返回但不是模型动作的内容不会贡献 policy loss。GRPO 因此用“同题回答之间的相对好坏”替代了 PPO 的 Critic；但它仍然通过 `ratio`、优势和 KL 项来决定哪些生成 token 应该被提高或降低概率。
+
+#### 4.2 一个训练步的完整流程（train_grpo.py:71）
+
+```
+取 B=2 个 prompt（左 padding 对齐）
+  ├─ rollout：每 prompt 采 6 条回答（temperature=0.8）→ 12 条
+  ├─ calculate_rewards：奖励模型 + 规则 → 12 个分数
+  ├─ 组内标准化 → advantages（shape [12]，逐回答广播到它的每个 token）
+  ├─ Actor 前向（可训练）→ per_token_logps
+  ├─ Ref 前向（no_grad）→ ref_per_token_logps → per_token_kl
+  ├─ ratio = exp(new − old)，old 来自 rollout 时记录
+  ├─ grpo/cispo 损失 → backward → clip → AdamW → CosineAnnealingLR
+  └─ 每 10 步：保存权重 + rollout_engine.update_policy(model) 同步生成端
+```
+
+几个实现细节：
+
+- **`logp_pos = prompt_lens − 1 + arange(R)`**：因为预测是错位的（位置 t 预测 t+1），回答段第 k 个 token 的 logprob 在 logits 的 `prompt_len−1+k` 位置上取——和前两阶段的 shift-by-one 是同一个对齐。
+- **eos 截断掩码**（train_grpo.py:126-130）：找到每条回答第一个 `<|im_end|>`，之后的 token 掩码置 0——模型说完之后被 pad 填充的部分不参与损失，与 SFT 的 -100 思路一致。
+- **不用 GradScaler**：直接 `loss.backward()`（bf16 下本就不需要），且用 `CosineAnnealingLR` 调度器替代手写的 `get_lr`。
+- **`update_policy`**：torch 模式下只是换个引用；sglang 模式下要把最新权重存盘、POST 给推理服务热更新——保证"生成用的模型"和"训练的模型"始终是同一份参数，否则 ratio 的含义就错了（变成离线策略）。
+
+#### 4.3 GRPO vs PPO 的对应关系
+
+| PPO 概念 | GRPO 中的对应 |
+|---|---|
+| Critic 网络 $V(s)$ | 组内均值 $\operatorname{mean}(r_1, \dots, r_G)$ |
+| GAE 优势（逐 token 不同） | 组内标准化分数（同一回答内所有 token 共享一个 A） |
+| Critic 的 value_loss | 不存在 |
+| 每 prompt 采 1 条 | 每 prompt 采 6 条 |
+| 4 个模型 | 3 个模型（省一个 Critic 的显存和调参） |
+
+代价也明显：GRPO 的采样量是 PPO 的 6 倍（`num_generations=6`），且组内 6 条全好或全坏时 $\operatorname{std} \approx 0$，优势退化——所以 GRPO 特别适合"答案有明确对错/好坏区分度"的任务。
+
+---
+
+### 5. 三种方法的完整对照
+
+| | DPO | PPO | GRPO |
+|---|---|---|---|
+| 数据文件 | `dpo.jsonl`（1.7 万偏好对） | `rlaif.jsonl`（2 万 prompt） | 同左 |
+| Dataset 类 | `DPODataset` | `RLAIFDataset` | `RLAIFDataset` |
+| 数据侧 shift | ✅ x=[:-1], y=[1:] | ❌（forward 后 gather） | ❌ |
+| 每步先采样？ | 否 | 是（1 条/prompt） | 是（6 条/prompt） |
+| 优势/偏好信号 | $\text{chosen} - \text{rejected}$ 的 logprob 差 | GAE（Critic 估计） | 组内 $(r - \text{mean})/\text{std}$ |
+| 防跑偏机制 | $\beta \cdot$隐式 KL（ref logratio） | clip $\varepsilon = 0.2$ + KL coef 0.02 + 早停 0.25 | clip $\varepsilon = 0.2$ 或 cispo $\le 5$ + $\beta = 0.1$ |
+| 学习率 | 4e-8 | actor 3e-7 / critic 5e-7 | 3e-7 |
+| batch / 累积 | 4 / 1 | 2（mini_batch 2，复用 2 轮）/ 1 | 2 / 1 |
+| 显存模型数 | policy + ref | actor + critic + ref + reward | policy + ref + reward |
+| 保存 | `out/dpo_768.pth` | `out/ppo_actor_768.pth`（断点含 critic） | `out/grpo_768.pth` |
+
+怎么选：
+
+- **有现成偏好对数据、想省事** → DPO：无采样、无奖励模型、代码最短，效果常常够用。
+- **有奖励模型/可验证奖励、追求上限** → GRPO：比 PPO 少一个 Critic，工程上更稳，是当前主流（DeepSeek 系）。
+- **需要逐 token 精细信用分配、或做研究对照** → PPO：经典基线，理解它才能看懂 GAE、critic、clip 这些 RL 核心概念在本仓库的落地。
+
+---
+
+### 6. 关键数字速查表
+
+| 项目 | 值 | 出处 |
+|---|---|---|
+| DPO $\beta$ / lr / epochs | 0.15 / 4e-8 / 1 | `train_dpo.py:152,137,135` |
+| DPO loss | $-\log\sigma\big(\beta \cdot (\pi_{\text{logratio}} - \text{ref\_logratio})\big)$ | `train_dpo.py:34` |
+| PPO clip $\varepsilon$ / KL coef / 早停 KL | 0.2 / 0.02 / 0.25 | `train_ppo.py:330-337` |
+| PPO GAE $\gamma$ / $\lambda$ | 1.0 / 0.95 | `train_ppo.py:333` |
+| PPO 复用轮数 / mini_batch | 2 / 2 | `train_ppo.py:336,338` |
+| GRPO num_generations | 6 | `train_grpo.py:226` |
+| GRPO $\beta$ / $\varepsilon$ / cispo 上界 | 0.1 / 0.2 / 5.0 | `train_grpo.py:227-230` |
+| 奖励模型 | internlm2-1_8b-reward，分数裁剪 ±3 | `trainer_utils.py:160` |
+| 采样温度 / 最大生成长度 | 0.8 / 1024 | `train_grpo.py:85,224` |
+| 思考开启概率 thinking_ratio | 0.9 | `train_grpo.py:239` |
+| KL 估计式 | $\exp(x) - x - 1$（k3 无偏估计） | `train_grpo.py:133` / `train_ppo.py:207` |
+
+---
+
+### 7. 一页纸回顾
+
+1. **共同骨架**：RL 阶段 = 在"奖励最大化"与"KL 不偏离 SFT 快照"之间走钢丝；ref 模型永远冻结在场。
+2. **DPO**：离线偏好对 → 双模型一次前向 → $-\log\sigma(\beta \cdot \Delta\text{logratio})$。把 RLHF 闭式解成监督式损失，无采样、无奖励模型，lr 必须极小（4e-8）。
+3. **PPO**：在线采样 → 奖励模型+规则打分 → **Critic 学 $V(s)$** → GAE 把整句奖励摊成逐 token 优势 → $\text{clip}(\text{ratio},\ 1 \pm 0.2)$ 小步更新，同批数据复用 2 轮，KL 超 0.25 早停。四模型同驻，最重。
+4. **GRPO**：每 prompt 采 6 条，**组内均值当基线取代 Critic** → 优势 $= (r - \text{mean})/\text{std}$ → 逐 token KL + clip（或默认的 cispo 变体）→ 序列内平均再 batch 平均。三模型，当前主流。
+5. **与前两阶段的关系**：数据格式复用 SFT 的 ChatML 模板与 loss mask 思路（assistant 区间/有效回答区间才计分）；模型 forward 不变，变化的始终是"损失函数如何定义好坏"。
+
+---
+
+## 4. GRPO、DAPO、GSPO：从 reward 到 policy loss 的完整推导
+
+这一节专门把三个容易混淆的概念放在一起：**advantage 的粒度、ratio 的粒度，以及 loss 的聚合方式**。MiniMind 当前 `train_grpo.py` 实现的是 token-level ratio 的 GRPO/CISPO 风格，并没有直接实现 GSPO 或完整 DAPO；下面先解释项目代码，再对照 DAPO 和 GSPO 的公式。
+
+### 4.1 统一符号和数据 shape
+
+假设一个训练 batch 有 `B` 个 prompt，每个 prompt 由旧策略采样 `G` 条回答，每条回答最多保留 `R` 个 token：
+
+```text
+prompt 数量：B
+每个 prompt 的回答数：G
+回答最大长度：R
+总 response 数：N = B × G
+```
+
+Rollout 后的关键张量通常是：
+
+```text
+completion_ids          [B×G, R]       每条 response 的 token id
+completion_mask         [B×G, R]       有效生成 token=1，padding=0
+per_token_logps         [B×G, R]       当前策略对每个生成 token 的 log 概率
+old_per_token_logps     [B×G, R]       采样时旧策略对每个 token 的 log 概率
+ref_per_token_logps     [B×G, R]       冻结参考模型对每个 token 的 log 概率
+rewards                 [B×G]          每条 response 一个总 reward
+advantages              [B×G]          每条 response 一个组内相对 advantage
+```
+
+例如 `B=2, G=3, R=4`：
+
+```text
+rewards.shape = [6]
+completion_ids.shape = [6, 4]
+per_token_logps.shape = [6, 4]
+advantages.shape = [6]
+```
+
+排列通常是：
+
+```text
+prompt 1：response 1、response 2、response 3
+prompt 2：response 1、response 2、response 3
+```
+
+所以：
+
+```python
+grouped_rewards = rewards.view(-1, args.num_generations)
+```
+
+会把：
+
+```text
+[R1, R2, R3, R4, R5, R6]
+```
+
+恢复成：
+
+```text
+[[R1, R2, R3],
+ [R4, R5, R6]]
+```
+
+每一行就是同一个 prompt 采样出的一个 group。
+
+### 4.2 reward 和 response-level advantage
+
+例如同一个问题采样 3 条回答：
+
+```text
+response 1 → reward = 3
+response 2 → reward = 1
+response 3 → reward = 2
+```
+
+GRPO、DAPO、GSPO 都可以使用组内标准化的相对优势：
+
+$$
+\hat A_i =
+\frac{R_i-\operatorname{mean}(R_1,\dots,R_G)}
+{\operatorname{std}(R_1,\dots,R_G)+\epsilon}
+$$
+
+本例中组内均值为 2，所以未标准化时：
+
+```text
+response 1：A1 =  3 - 2 = +1  → 鼓励
+response 2：A2 =  1 - 2 = -1  → 压制
+response 3：A3 =  2 - 2 =  0  → 基本不调整
+```
+
+这里要特别注意：**一个 response 一个 advantage，而不是每个 token 一个独立 reward**。在 GRPO/DAPO 中，response-level advantage 会广播到该 response 的所有 token：
+
+```python
+advantages.shape                 # [B×G]
+advantages.unsqueeze(1).shape    # [B×G, 1]
+```
+
+与 `[B×G, R]` 的 token 矩阵相乘时，PyTorch 会自动广播：
+
+```text
+response 1 的 A1 → response 1 的 R 个 token 都使用 A1
+response 2 的 A2 → response 2 的 R 个 token 都使用 A2
+```
+
+这是一种信用分配近似：它告诉模型“这整条回答相对好还是坏”，但不精确指出回答内部哪一个 token 单独导致了结果。
+
+### 4.3 token-level ratio 和 per-token loss
+
+第 (i) 条 response 的第 (t) 个 token 的重要性采样比是：
+
+$$
+r_{i,t}(\theta)=
+\frac{\pi_\theta(o_{i,t}\mid q,o_{i,<t})}
+{\pi_{\text{old}}(o_{i,t}\mid q,o_{i,<t})}
+$$
+
+MiniMind 中通过 log probability 的差计算：
+
+```python
+ratio = torch.exp(per_token_logps - old_per_token_logps)
+```
+
+因为：
+
+$$
+\log r_{i,t}
+=\log\pi_\theta(o_{i,t})
+-\log\pi_{\text{old}}(o_{i,t})
+$$
+
+所以：
+
+```text
+per_token_logps:     [B×G, R]
+old_per_token_logps: [B×G, R]
+ratio:               [B×G, R]
+```
+
+`per_token_loss` 也是 `[B×G, R]`。它不是预训练/SFT 中的 `-log(真实 token 概率)`，而是某个生成 token 对 PPO-style policy objective 的贡献：
+
+$$
+\ell_{i,t}=
+-\min\left(
+r_{i,t}\hat A_i,
+\operatorname{clip}(r_{i,t},1-\epsilon,1+\epsilon)\hat A_i
+\right)
++\beta\,\mathrm{KL}_{i,t}
+$$
+
+如果 `A_i > 0`，优化倾向于提高这条 response 中 token 的概率；如果 `A_i < 0`，优化倾向于降低这些 token 的概率。它仍然不是“每个 token 获得了独立 reward”，而是一个 response-level advantage 被用于这条 response 的每个 token。
+
+### 4.4 `completion_mask` 和 MiniMind 的 loss 聚合
+
+如果 response 实际长度不同，统一 padding 到 `R`：
+
+```text
+completion_ids：  [t0, t1, t2, pad, pad]
+completion_mask： [ 1,  1,  1,   0,   0]
+```
+
+MiniMind 的聚合代码是：
+
+```python
+policy_loss = (
+    (per_token_loss * completion_mask).sum(dim=1)
+    / completion_mask.sum(dim=1).clamp(min=1)
+).mean()
+```
+
+如果 `per_token_loss.shape = [6, 4]`，shape 变化是：
+
+```text
+per_token_loss × completion_mask  → [6, 4]
+sum(dim=1)                         → [6]
+mask.sum(dim=1)                    → [6]
+逐 response 相除                   → [6]
+mean()                             → scalar
+```
+
+所以它是：
+
+$$
+\mathcal{L}_{\text{MiniMind-GRPO}}
+=
+\frac{1}{N}\sum_{i=1}^{N}
+\left(\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\ell_{i,t}\right)
+$$
+
+不是“所有 loss 相加后除以 batch 中所有 loss 的总和”，而是：
+
+```text
+每条 response 内先对有效 token 求平均
+→ 再对所有 response 的平均 loss 求平均
+```
+
+例如：
+
+```text
+response A：2 个 token，loss=[1, 1]
+response B：6 个 token，loss=[3, 3, 3, 3, 3, 3]
+```
+
+则：
+
+```text
+A 的平均 loss = 1
+B 的平均 loss = 3
+最终 loss = (1 + 3) / 2 = 2
+```
+
+因此 A 和 B 各占 50% 的 response 权重；B 虽然 token 更多，但不会因为更长而获得更大的总权重。
+
+### 4.5 GRPO 目标函数
+
+忽略 KL 项时，GRPO 的目标函数可以写成：
+
+$$
+\mathcal{J}_{\text{GRPO}}
+=\mathbb{E}\left[
+\frac{1}{G}\sum_{i=1}^{G}\frac{1}{|o_i|}
+\sum_{t=1}^{|o_i|}
+\min\left(
+r_{i,t}\hat A_i,
+\operatorname{clip}(r_{i,t},1-\epsilon,1+\epsilon)\hat A_i
+\right)
+\right]
+$$
+
+MiniMind 当前实现还加入逐 token KL：
+
+```python
+per_token_kl = torch.exp(kl_div) - kl_div - 1
+```
+
+因此当前实现可以概括为：
+
+```text
+token-level ratio
++ token-level clip
++ response-level advantage
++ response 内平均、response 间平均
++ token-level KL penalty
+```
+
+### 4.6 DAPO：为什么要改成 token-level loss
+
+DAPO 保留 response-level advantage 和 token-level ratio，但把 loss 的归一化方式改成所有有效 token 统一聚合：
+
+$$
+\mathcal{J}_{\text{DAPO}}
+=\mathbb{E}\left[
+\frac{1}{\sum_{i=1}^{G}|o_i|}
+\sum_{i=1}^{G}\sum_{t=1}^{|o_i|}
+\min\left(
+r_{i,t}\hat A_i,
+\operatorname{clip}\left(r_{i,t},1-\epsilon_{\text{low}},1+\epsilon_{\text{high}}\right)\hat A_i
+\right)
+\right]
+$$
+
+训练时最小化：
+
+$$
+\mathcal{L}_{\text{DAPO}}=-\mathcal{J}_{\text{DAPO}}
+$$
+
+对比两种 reduction：
+
+```text
+GRPO：
+    每条 response 内平均
+    → response 之间平均
+
+DAPO：
+    所有有效 token 求和
+    → 除以所有有效 token 总数
+```
+
+如果一条 response 有 2 个 token，另一条有 6 个 token：
+
+```text
+GRPO：两条 response 各占 50%
+DAPO：8 个 token 统一聚合，长 response 的总影响约占 6/8
+```
+
+因此 DAPO 能减少长 CoT response 中单 token 被 response-level 平均稀释的问题。DAPO 不只是修改 reduction，还包括：
+
+1. **Clip-Higher**：把 clip 下界和上界解耦，例如从 `[0.8, 1.2]` 改为 `[0.8, 1.28]`，给低概率探索 token 更大的上升空间；
+2. **Dynamic Sampling**：过滤某个 prompt 下全对或全错的 group，因为它们的 group-relative advantage 可能全部为 0，无法提供有效梯度；
+3. **Overlong Reward Shaping/Filtering**：处理过长或被截断的回答，减少长度带来的奖励噪声。
+
+论文的 DAPO 目标本身不保留 MiniMind 当前这种显式 KL 项；工程实现中是否保留 KL，需要以具体代码为准。 [DAPO 原论文](https://dapo-sia.github.io/static/pdf/dapo_paper.pdf)
+
+### 4.7 GSPO：从 token-level ratio 到 sequence-level ratio
+
+GSPO 的核心变化不是简单修改最后的平均方式，而是把 ratio 从 token level 提升到 response level。
+
+GRPO 中，一条 response 有：
+
+```text
+token 1 → ratio_1
+token 2 → ratio_2
+token 3 → ratio_3
+```
+
+GSPO 先把整条 response 的 token log ratio 求平均，再指数化：
+
+$$
+s_i(\theta)=
+\exp\left(\frac{1}{|o_i|}\sum_{t=1}^{|o_i|}\log r_{i,t}(\theta)\right)
+$$
+
+等价地：
+
+$$
+s_i(\theta)=
+\left(\prod_{t=1}^{|o_i|}r_{i,t}(\theta)\right)^{1/|o_i|}
+$$
+
+因此它是 token ratio 的**几何平均**，不是算术平均：
+
+```text
+错误：s = (ratio_1 + ratio_2 + ratio_3) / 3
+正确：s = exp((log ratio_1 + log ratio_2 + log ratio_3) / 3)
+```
+
+例如：
+
+```text
+token ratios = [2.0, 0.5]
+算术平均 = 1.25
+几何平均 = sqrt(2.0 × 0.5) = 1.0
+```
+
+shape 变化是：
+
+```text
+token log ratios       [B×G, R]
+mask 后沿 token 求平均  [B×G]
+exp                    [B×G]
+```
+
+GSPO 使用几何平均，是因为整条 response 的概率本身是 token 条件概率的乘积；在 log 空间求平均再指数化，还可以降低 response 长度带来的数值波动。
+
+### 4.8 GSPO 的目标函数
+
+GSPO 的目标函数是：
+
+$$
+\mathcal{J}_{\text{GSPO}}
+=\mathbb{E}\left[
+\frac{1}{G}\sum_{i=1}^{G}
+\min\left(
+s_i\hat A_i,
+\operatorname{clip}(s_i,1-\epsilon,1+\epsilon)\hat A_i
+\right)
+\right]
+$$
+
+所以可以准确地说：
+
+```text
+每条 response 一个 advantage A_i
+每条 response 一个 sequence-level ratio s_i
+每条 response 得到一个 objective
+最后对 response 求平均
+```
+
+但“每个 response 一个 ratio”不等于“只有一个 token 有梯度”。因为：
+
+```text
+s_i = exp(整条 response 的 log ratio 平均值)
+```
+
+反向传播时，梯度仍然会经过组成 `s_i` 的所有 token log probability；只是这些 token 共同决定一个 response-level ratio，并共享一次 clip 决策。GSPO 的核心是 sequence-level importance ratio、clipping 和 optimization。 [GSPO 原论文](https://arxiv.org/abs/2507.18071)
+
+### 4.9 三种方法总对照
+
+| 方法 | Advantage | Ratio | Clip | Loss 聚合 |
+|---|---|---|---|---|
+| MiniMind GRPO/CISPO | response-level | token-level | token-level | response 内平均，再 response 间平均 |
+| DAPO | response-level | token-level | token-level，上下界解耦 | 所有有效 token 统一聚合 |
+| GSPO | response-level | sequence-level | sequence-level | response-level objective 再平均 |
+
+可以把三个算法放在两个维度上理解：
+
+```text
+维度 1：ratio 的粒度
+token-level  ←────────→  sequence-level
+
+维度 2：loss 的归一化方式
+response 内平均  ←────→  所有 token 统一平均
+```
+
+最终记忆：
+
+```text
+GRPO：每个 token 自己算 ratio，但每条 response 权重相等
+DAPO：仍然 token-level ratio，但所有有效 token 统一聚合
+GSPO：整条 response 共享一个 sequence-level ratio
+```
+
+
+
+## 5. 附：Tool 训练数据格式（SFT + RL）
+
+```text
+━━━━━━━━ 块① system:工具菜单 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<|im_start|>system                                      ← 开场:谁在说话
+# Tools
+<tools>
+{"function": {"name": "random_number", ...}}             ← 来自JSON里的 tools 字段
+{"function": {"name": "get_exchange_rate", ...}}
+</tools>
+(调用格式说明...)
+<|im_end|>                                               ← 收尾:说完了
+
+━━━━━━━━ 块② user:用户提问 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<|im_start|>user                                         ← 换人了:user说话
+请随机生成一个1到100之间的数字,并查询美元对人民币的当前汇率
+<|im_end|>
+
+━━━━━━━━ 块③ assistant:第一次回复(要学!) ━━━━━━━━━━━━━━━━
+<|im_start|>assistant                                    ← 换人了:assistant说话
+<think>
+
+</think>
+生成1到100之间的随机数并查询当前美元对人民币汇率            ← 来自 content 字段
+<tool_call>
+{"name": "random_number", "arguments": {"min": 1, "max": 100}}   ← 来自 tool_calls 字段
+</tool_call>
+<tool_call>
+{"name": "get_exchange_rate", "arguments": {"from_currency": "USD", "to_currency": "CNY"}}
+</tool_call>
+<|im_end|>
+
+━━━━━━━━ 块④ 工具结果(伪装成user说话) ━━━━━━━━━━━━━━━━━━
+<|im_start|>user                                         ← 注意!role:tool被模板包装成了user
+<tool_response>
+{"result": 69}                                           ← 来自 role:"tool" 那条消息
+{"from_currency": "USD", "rate": 7.21}
+</tool_response>
+<|im_end|>
+
+━━━━━━━━ 块⑤ assistant:最终回答(要学!) ━━━━━━━━━━━━━━━━━
+<|im_start|>assistant                                    ← 又换回assistant
+<think>
+
+</think>
+随机生成的数字是:69。美元对人民币汇率是1 = 7.21。
+<|im_end|>
+```
+
+```text
+━━━━━━━━ 块① system:工具菜单(和SFT完全一样) ━━━━━━━━━━━━
+<|im_start|>system
+# Tools
+<tools>
+{"type": "function", "function": {"name": "unit_converter", "description": "进行单位换算...", ...}}
+{"type": "function", "function": {"name": "translate_text", "description": "将文本翻译成目标语言", ...}}
+{"type": "function", "function": {"name": "calculate_math", "description": "计算数学表达式的结果...", ...}}
+{"type": "function", "function": {"name": "get_exchange_rate", "description": "查询两种货币之间的汇率", ...}}
+</tools>
+(调用格式说明,教它用<tool_call>标签)
+<|im_end|>
+
+━━━━━━━━ 块② user:用户提问 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<|im_start|>user
+Convert 97 pounds to kg. Additionally, 把'你好世界'翻译成english. And 美元兑欧元汇率是多少
+<|im_end|>
+
+━━━━━━━━ 块③ assistant:【数据里是空的,直接丢弃】 ━━━━━━━━━
+```
