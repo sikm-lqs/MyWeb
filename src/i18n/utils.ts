@@ -1,4 +1,4 @@
-export const SITE_NAME = "MyWeb";
+export const SITE_NAME = "Sikm's Log";
 export const DEFAULT_LANG = "zh-CN";
 export const SUPPORTED_LANGS = [DEFAULT_LANG, "en"] as const;
 export const PROFILE_AVATAR_SRC = "/images/profile/avatar.jpg";
