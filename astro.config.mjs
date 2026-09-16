@@ -7,14 +7,13 @@ import rehypeKatex from 'rehype-katex';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
-  integrations: [
-    mdx({
-      processor: unified({
-        remarkPlugins: [remarkMath],
-        rehypePlugins: [rehypeKatex],
-      }),
+  markdown: {
+    processor: unified({
+      remarkPlugins: [remarkMath],
+      rehypePlugins: [rehypeKatex],
     }),
-  ],
+  },
+  integrations: [mdx()],
   vite: {
     plugins: [tailwindcss()],
   },
