@@ -1,7 +1,6 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
 import Container from "../components/layout/Container.astro";
-import Badge from "../components/ui/Badge.astro";
 import { ui } from "../i18n/ui";
 import {
   formatDate,
@@ -54,15 +53,15 @@ const copy = ui[lang];
 >
   <section class="pb-20 pt-14">
     <Container>
-      <div class="mx-auto max-w-4xl">
+      <div>
         <!-- 小型面包屑：首页 > 博客 (支持中英) -->
-        <div class="text-sm text-[var(--text-subtle)] mb-2">
-          <a href={lang === 'zh-CN' ? '/' : '/en'} class="hover:text-[var(--text-main)] transition-colors"> {lang === 'zh-CN' ? '首页' : 'Home'} </a>
-          <span class="mx-1">›</span>
-          <a href={backHref} class="hover:text-[var(--text-main)] transition-colors"> {lang === 'zh-CN' ? '博客' : 'Blog'} </a>
+        <div class="flat-item-meta">
+          <a href={lang === 'zh-CN' ? '/' : '/en'}>{lang === 'zh-CN' ? '首页' : 'Home'}</a>
+          <span aria-hidden="true">›</span>
+          <a href={backHref}>{lang === 'zh-CN' ? '博客' : 'Blog'}</a>
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center gap-4 text-xs uppercase tracking-[0.06em] text-[var(--text-subtle)]">
+        <div class="flat-item-meta mt-3">
           <span>{formatDate(publishedAt, lang)}</span>
           {readTime && <span>· {readTime}</span>}
           {wordCount && <span>· {wordCount} {lang === 'zh-CN' ? '字' : 'words'}</span>}
@@ -71,20 +70,18 @@ const copy = ui[lang];
           )}
         </div>
 
-        <h1 class="mt-5 text-3xl font-semibold tracking-tight text-[var(--text-main)] sm:text-4xl font-serif">
+        <h1 class="mt-5 text-3xl font-semibold leading-[1.25] tracking-tight text-[var(--text-main)] sm:text-4xl">
           {title}
         </h1>
         <p class="mt-5 text-lg leading-8 text-[var(--text-muted)]">{description}</p>
         {tags.length > 0 && (
-          <div class="mt-6 flex flex-wrap gap-2">
-            {tags.map((tag) => <Badge>{tag}</Badge>)}
-          </div>
+          <p class="flat-item-tags mt-6">{tags.join(" · ")}</p>
         )}
         {cover && (
           <img
             src={cover}
             alt={coverAlt}
-            class="mt-8 rounded-[1rem] border border-[#d4c9b8] bg-[#f4efe6]"
+            class="mt-8 rounded-[1rem] border border-[var(--border-strong)] bg-[var(--surface)]"
           />
         )}
         <article class="rich-content mt-10">

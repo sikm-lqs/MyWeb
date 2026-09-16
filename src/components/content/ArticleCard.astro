@@ -1,5 +1,4 @@
 ---
-import Badge from "../ui/Badge.astro";
 import { formatDate, type SiteLang } from "../../i18n/utils";
 
 interface Props {
@@ -10,9 +9,7 @@ interface Props {
   tags?: string[];
   readTime?: string;
   lang: SiteLang;
-  cover?: string;
-  coverAlt?: string;
-  variant?: "default" | "compact" | "horizontal" | "featured";
+  featured?: boolean;
 }
 
 const {
@@ -23,99 +20,32 @@ const {
   tags = [],
   readTime,
   lang,
-  cover,
-  coverAlt = "",
-  variant = "horizontal",
+  featured = false,
 } = Astro.props;
 
-const horizontal = variant === "horizontal" || variant === "featured";
-const featured = variant === "featured";
-const visibleTags = tags.slice(0, variant === "compact" ? 2 : 3);
-const hiddenTagCount = Math.max(tags.length - visibleTags.length, 0);
+const visibleTags = tags.slice(0, 3);
 ---
 
-<article
-  class:list={[
-    "content-card animated-card group h-full overflow-hidden",
-    featured
-      ? "content-card-featured grid md:grid-cols-[minmax(19rem,0.62fr)_minmax(0,1fr)]"
-      : horizontal
-        ? "grid md:grid-cols-[minmax(15rem,0.46fr)_minmax(0,1fr)]"
-        : "flex flex-col",
-    featured ? "rounded-[1.45rem]" : variant === "compact" ? "rounded-[1.1rem]" : "rounded-[1.25rem]",
-  ]}
->
-  <a
-    href={href}
-    class:list={[
-      "content-card-media card-image-link",
-      horizontal ? "md:border-b-0 md:border-r" : "",
-    ]}
-    aria-label={title}
-  >
-    {cover ? (
-      <img
-        src={cover}
-        alt={coverAlt}
-        class:list={[
-          "w-full object-cover",
-          featured ? "h-52 md:h-full md:min-h-[15rem]" : horizontal ? "h-44 md:h-full md:min-h-[11.5rem]" : "h-32 sm:h-36",
-        ]}
-        loading="lazy"
-      />
-    ) : (
-      <div class="card-cover-fallback">
-        <span>{title.slice(0, 2)}</span>
-      </div>
-    )}
-  </a>
-
-  <div
-    class:list={[
-      "content-card-body flex flex-1 flex-col",
-      variant === "compact" ? "gap-2.5 p-3.5 sm:p-4" : horizontal ? "gap-3.5 p-4 sm:p-5" : "gap-3 p-4 sm:p-5",
-    ]}
-  >
-    <div class="flex flex-wrap items-center gap-2 text-xs text-[var(--text-subtle)]">
-      <span>{formatDate(publishedAt, lang)}</span>
-      {readTime && (
-        <>
-          <span>·</span>
-          <span>{readTime}</span>
-        </>
-      )}
-    </div>
-
-    <div class:list={[variant === "compact" ? "space-y-2" : "space-y-2.5"]}>
-      <h3
-        class:list={[
-          "font-semibold tracking-tight text-[var(--text-main)]",
-          variant === "compact"
-            ? "text-base [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden"
-            : featured
-              ? "text-xl sm:text-2xl [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden"
-              : "text-lg sm:text-xl [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden",
-        ]}
-      >
-        <a href={href} class="content-card-title-link">
-          {title}
-        </a>
-      </h3>
-      <p
-        class:list={[
-          "text-sm text-[var(--text-muted)] [display:-webkit-box] [-webkit-box-orient:vertical] overflow-hidden",
-          variant === "compact" ? "leading-[1.45rem] [-webkit-line-clamp:2]" : "leading-6 [-webkit-line-clamp:3]",
-        ]}
-      >
-        {summary}
-      </p>
-    </div>
-
-    {tags.length > 0 && (
-      <div class="mt-auto flex flex-wrap gap-2">
-        {visibleTags.map((tag) => <Badge compact>{tag}</Badge>)}
-        {hiddenTagCount > 0 && <Badge compact>{`+${hiddenTagCount}`}</Badge>}
-      </div>
+<article class:list={["flat-item", featured && "flat-item-featured"]}>
+  <div class="flat-item-meta">
+    <span>{formatDate(publishedAt, lang)}</span>
+    {readTime && (
+      <>
+        <span aria-hidden="true">·</span>
+        <span>{readTime}</span>
+      </>
     )}
   </div>
+
+  <h3 class="flat-item-title">
+    <a href={href} class="content-card-title-link">
+      {title}
+    </a>
+  </h3>
+
+  <p class="flat-item-summary">{summary}</p>
+
+  {visibleTags.length > 0 && (
+    <p class="flat-item-tags">{visibleTags.join(" · ")}</p>
+  )}
 </article>

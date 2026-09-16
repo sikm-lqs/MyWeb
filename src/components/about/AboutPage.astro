@@ -1,7 +1,5 @@
 ---
 import Container from "../layout/Container.astro";
-import SectionTitle from "../ui/SectionTitle.astro";
-import Badge from "../ui/Badge.astro";
 import SocialLink from "../ui/SocialLink.astro";
 import { ui } from "../../i18n/ui";
 import {
@@ -28,13 +26,13 @@ const copy = ui[lang];
 
 <section class="pb-20 pt-14">
   <Container>
-    <SectionTitle
-      eyebrow={copy.about.eyebrow}
-      title={copy.about.title}
-      description={copy.about.lead}
-    />
+    <div class="page-head">
+      <p class="section-eyebrow">{copy.about.eyebrow}</p>
+      <h1>{copy.about.title}</h1>
+      <p>{copy.about.lead}</p>
+    </div>
 
-    <div class="mt-12 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+    <div class="mt-12 grid gap-6">
       <div class="space-y-6">
         <section class="rounded-[0.75rem] border border-[var(--border)] bg-[var(--surface)] p-6">
           <h2 class="text-xl font-semibold text-[var(--text-main)]">{copy.about.identityTitle}</h2>
@@ -55,11 +53,7 @@ const copy = ui[lang];
       <aside class="space-y-6">
         <section class="rounded-[0.75rem] border border-[var(--border)] bg-[var(--surface)] p-6">
           <p class="eyebrow">Keywords</p>
-          <div class="mt-5 flex flex-wrap gap-2">
-            {ui[lang].currentFocus.map((item) => (
-              <Badge>{item}</Badge>
-            ))}
-          </div>
+          <p class="flat-item-tags mt-4">{ui[lang].currentFocus.join(" · ")}</p>
         </section>
 
         <section class="rounded-[0.75rem] border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -70,11 +64,11 @@ const copy = ui[lang];
               Links
             </p>
             <div class="mt-2.5 flex flex-wrap gap-2">
-              <SocialLink platform="github" href={GITHUB_URL} label={copy.labels.github} handle={GITHUB_HANDLE} compact iconOnly />
-              <SocialLink platform="bilibili" href={BILIBILI_URL} label={copy.labels.bilibili} handle={BILIBILI_HANDLE} compact iconOnly />
-              <SocialLink platform="x" href={X_URL} label={copy.labels.x} handle={X_HANDLE} compact iconOnly />
-              <SocialLink platform="xiaohongshu" href={XIAOHONGSHU_URL} label={copy.labels.xiaohongshu} handle={XIAOHONGSHU_HANDLE} compact iconOnly />
-              <SocialLink platform="wechat" href={WECHAT_URL} label={copy.labels.wechat} handle={WECHAT_HANDLE} compact iconOnly />
+              <SocialLink platform="github" href={GITHUB_URL} label={copy.labels.github} handle={GITHUB_HANDLE} iconOnly />
+              <SocialLink platform="bilibili" href={BILIBILI_URL} label={copy.labels.bilibili} handle={BILIBILI_HANDLE} iconOnly />
+              <SocialLink platform="x" href={X_URL} label={copy.labels.x} handle={X_HANDLE} iconOnly />
+              <SocialLink platform="xiaohongshu" href={XIAOHONGSHU_URL} label={copy.labels.xiaohongshu} handle={XIAOHONGSHU_HANDLE} iconOnly />
+              <SocialLink platform="wechat" href={WECHAT_URL} label={copy.labels.wechat} handle={WECHAT_HANDLE} iconOnly />
             </div>
           </div>
         </section>

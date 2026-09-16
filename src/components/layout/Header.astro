@@ -6,10 +6,9 @@ import { ui } from "../../i18n/ui";
 import {
   GITHUB_HANDLE,
   GITHUB_URL,
+  PROFILE_AVATAR_SRC,
   getAboutPath,
   getCollectionPath,
-  getFriendsPath,
-  getGuestbookPath,
   getHomePath,
   type SiteLang,
 } from "../../i18n/utils";
@@ -28,8 +27,6 @@ const navItems = [
   { href: getCollectionPath("writing", lang), label: copy.nav.writing, key: "writing" },
   { href: getCollectionPath("projects", lang), label: copy.nav.projects, key: "projects" },
   { href: getCollectionPath("life", lang), label: copy.nav.life, key: "life" },
-  { href: getGuestbookPath(lang), label: copy.nav.guestbook, key: "guestbook" },
-  { href: getFriendsPath(lang), label: copy.nav.friends, key: "friends" },
   { href: getAboutPath(lang), label: copy.nav.about, key: "about" },
 ];
 
@@ -46,7 +43,8 @@ const isActive = (href: string) =>
         href={getHomePath(lang)}
         class="site-brand"
       >
-        sikm
+        <img class="site-brand-avatar" src={PROFILE_AVATAR_SRC} alt="" />
+        Sikm
       </a>
 
       <nav class="site-nav">
@@ -81,7 +79,75 @@ const isActive = (href: string) =>
         </a>
         <ThemeToggle />
         <LanguageSwitch href={translationHref} label={copy.nav.languageSwitch} />
+        <button
+          class="mobile-nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="mobile-nav"
+          aria-label={copy.labels.menu}
+          data-mobile-nav-toggle
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="1.8"
+              d="M5 9h14M5 15h14"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   </Container>
+
+  <nav class="mobile-nav" id="mobile-nav" data-mobile-nav>
+    {navItems.map((item) => (
+      <a
+        href={item.href}
+        class:list={[isActive(item.href) && "is-active"]}
+      >
+        {item.label}
+      </a>
+    ))}
+  </nav>
 </header>
+
+<script>
+  const navToggle = document.querySelector<HTMLButtonElement>("[data-mobile-nav-toggle]");
+  const mobileNav = document.querySelector<HTMLElement>("[data-mobile-nav]");
+
+  if (navToggle && mobileNav) {
+    const setOpen = (open: boolean) => {
+      mobileNav.classList.toggle("is-open", open);
+      navToggle.setAttribute("aria-expanded", String(open));
+    };
+
+    navToggle.addEventListener("click", () => {
+      setOpen(!mobileNav.classList.contains("is-open"));
+    });
+
+    mobileNav.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => setOpen(false));
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!mobileNav.classList.contains("is-open")) return;
+      if (
+        event.target instanceof Node &&
+        !mobileNav.contains(event.target) &&
+        !navToggle.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setOpen(false);
+    });
+
+    window.matchMedia("(min-width: 768px)").addEventListener("change", (event) => {
+      if (event.matches) setOpen(false);
+    });
+  }
+</script>

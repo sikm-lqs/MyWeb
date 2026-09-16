@@ -32,8 +32,7 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 
 已完成：
 
-- 带沉浸式欢迎页的中英文首页
-- 三栏博客首页布局
+- 中英文首页（hero + Writing / Projects / Life 单栏布局）
 - 显式浅色 / 深色主题切换
 - 中英文 About 页面
 - `writing` / `projects` / `life` 三个公开内容频道
@@ -69,10 +68,10 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 ├── src/
 │   ├── components/
 │   │   ├── about/                    # About 页面组件
-│   │   ├── content/                  # 内容卡片、列表页、图片组件
+│   │   ├── content/                  # 平面列表条目（ArticleCard/ProjectCard）、列表页、图片组件
 │   │   ├── home/                     # 首页组件
 │   │   ├── layout/                   # Header、Footer、Container
-│   │   └── ui/                       # Avatar、Badge、Button 等基础 UI
+│   │   └── ui/                       # Button、SocialLink、ThemeToggle 等基础 UI
 │   ├── content/                      # 文件驱动内容
 │   │   ├── writing/{zh,en}/
 │   │   ├── projects/{zh,en}/
@@ -127,14 +126,14 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 
 ## 视觉基线
 
-当前实现以 `src/styles/global.css` 为准，采用暖纸面、衬线字体、轻网格肌理和低饱和边框的 editorial / magazine 风格：
+当前实现以 `src/styles/global.css` 为准，采用暖纸面、全站无衬线字体、轻网格肌理和低饱和发丝分隔线的 editorial 风格：
 
 - 浅色主题基于 `#f4efe6`、`#eae3d5`、`#d4c9b8` 等暖色纸面变量
 - 深色主题是暖黑和低对比纸面边框，不走纯黑高亮或霓虹风
-- 标题和正文主要使用 `EB Garamond` + `Noto Serif SC`
-- 首页是 Welcome Gate + 三栏内容 dashboard，不是营销型 landing page
-- 卡片通过边框、留白、封面图和 hover 微位移建立层级
-- 新增 UI 优先复用现有 `ArticleCard`、`ProjectCard`、`Badge`、`Button`、`SectionTitle`、`BaseLayout`、`ArticleLayout` 和 `ProjectLayout`
+- 全站字体为无衬线：西文系统栈（零加载）+ 中文自托管 `MiSans` / `Noto Sans SC`
+- 首页是 hero + 单栏内容流（Writing / Projects / Life），不是营销型 landing page
+- 列表条目和卡片已拍平为无盒子的平面行，通过发丝分隔线、留白和 eyebrow 小标签建立层级
+- 新增 UI 优先复用现有 `ArticleCard`、`ProjectCard`、`Button`、`SocialLink`、`BaseLayout`、`ArticleLayout` 和 `ProjectLayout`
 
 ## 开发约定
 
@@ -145,4 +144,4 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - 中英文版本的 `translationKey` 必须一致；允许先发布单语内容
 - 不要提交 `.env`、密钥、构建产物或大型未压缩图片
 - 改动内容 schema、首页取数、路由规则时，同步更新 `README.md`、`dev-docs/内容发布流程.md` 以及本文件
-- 变更 UI 时保持现有静态内容站风格：暖纸面、衬线排版、克制、面向阅读和作品展示
+- 变更 UI 时保持现有静态内容站风格：暖纸面、sans 排版、克制、面向阅读和作品展示

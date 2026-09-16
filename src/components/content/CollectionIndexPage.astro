@@ -2,7 +2,6 @@
 import ArticleCard from "./ArticleCard.astro";
 import ProjectCard from "./ProjectCard.astro";
 import Container from "../layout/Container.astro";
-import SectionTitle from "../ui/SectionTitle.astro";
 import { ui } from "../../i18n/ui";
 import {
   getBlogEntryPath,
@@ -22,14 +21,22 @@ const copy = ui[lang];
 const entries = collection === "writing"
   ? await getPublishedBlogEntries(lang)
   : await getPublishedEntries(collection, lang);
+
+const collectionEyebrow: Record<SiteCollection, string> = {
+  writing: "Blog",
+  projects: "Projects",
+  research: "Research",
+  life: "Life",
+};
 ---
 
 <section class="pb-20 pt-14">
   <Container>
-    <SectionTitle
-      title={copy.collections[collection].title}
-      description={copy.collections[collection].description}
-    />
+    <div class="page-head">
+      <p class="section-eyebrow">{collectionEyebrow[collection]}</p>
+      <h1>{copy.collections[collection].title}</h1>
+      <p>{copy.collections[collection].description}</p>
+    </div>
 
     {
       entries.length === 0 ? (
@@ -37,7 +44,7 @@ const entries = collection === "writing"
           {copy.collections[collection].empty}
         </div>
       ) : collection === "projects" ? (
-        <div class="mt-10 grid gap-5">
+        <div class="flat-list mt-10">
           {entries.map((entry) => (
             <ProjectCard
               href={getEntryPath("projects", lang, entry)}
@@ -45,18 +52,15 @@ const entries = collection === "writing"
               summary={entry.data.summary}
               status={entry.data.status}
               stack={entry.data.stack}
-              cover={entry.data.cover}
-              coverAlt={entry.data.coverAlt}
               repoUrl={entry.data.repoUrl}
               demoUrl={entry.data.demoUrl}
               publishedAt={entry.data.publishedAt}
               lang={lang}
-              variant="horizontal"
             />
           ))}
         </div>
       ) : (
-        <div class="mt-8 grid gap-5">
+        <div class="flat-list mt-8">
           {entries.map((entry, index) => (
             <ArticleCard
               href={collection === "writing" ? getBlogEntryPath(lang, entry) : getEntryPath(collection, lang, entry)}
@@ -66,9 +70,7 @@ const entries = collection === "writing"
               tags={entry.data.tags}
               readTime={entry.data.readTime}
               lang={lang}
-              cover={entry.data.cover}
-              coverAlt={entry.data.coverAlt}
-              variant={index === 0 ? "featured" : "horizontal"}
+              featured={index === 0}
             />
           ))}
         </div>

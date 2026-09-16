@@ -1,6 +1,6 @@
 # MyWeb 项目沉淀文档
 
-更新时间：2026-08-14
+更新时间：2026-09-16
 
 本文档记录 MyWeb 当前的产品定位、技术方案、视觉基线、页面结构和后续规划。它是后续继续开发时的基准文档。
 
@@ -10,13 +10,13 @@
 
 ## 1.1 项目定位
 
-MyWeb 是 sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、工程实践、开源项目和少量生活切片。
+MyWeb 是 Sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、工程实践、开源项目和少量生活切片。
 
 它不是静态简历页，也不是纯技术博客，而是一个有个人气质、可持续更新、可被访问者慢慢浏览的个人研究空间。
 
 一句话定位：
 
-> 一个暖纸面、衬线排版、克制而可长期维护的个人研究小站：主线是 Agent / LLM / 工程实践，辅线是生活记录和个人表达。
+> 一个暖纸面、全站 sans 排版、克制而可长期维护的个人研究小站：主线是 Agent / LLM / 工程实践，辅线是生活记录和个人表达。
 
 核心目标：
 
@@ -32,18 +32,17 @@ MyWeb 是 sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、�
 当前版本采用：
 
 ```text
-Welcome Gate + 三栏博客首页 + 暖纸面 editorial 视觉系统
+Hero + 单栏名片式首页 + 暖纸面 sans editorial 视觉系统
 ```
 
-访问首页时：
+访问首页时直接进入正文，无欢迎页。首页自上而下：
 
-1. 每次打开首页先出现沉浸式欢迎页。
-2. 点击「进入小屋」后，欢迎页淡出并轻微上移。
-3. 进入真正首页。
-4. 真正首页采用三栏布局：
-   * 左侧：作者卡 + 站内导航
-   * 中间：最近写作 + 开源项目
-   * 右侧：Now + Quick Links + 留言入口 + 生活切片
+1. Hero：固定英文标题 `Welcome to Sikm's log`、一段简介、单色社交图标行
+2. Writing：最新 4 条博客（聚合 writing + research）
+3. Projects：最新 3 条项目
+4. Life：最新 2 条生活记录
+
+所有内容条目都是无盒子的平面列表行，条目之间用发丝分隔线，section 用 eyebrow 小标签区分。
 
 ---
 
@@ -145,76 +144,69 @@ https://myweb-649.pages.dev/
 
 ## 3.3 导航
 
-中文导航：
+中文导航（5 项）：
 
 ```text
-首页 / 博客 / 项目 / 生活 / 留言 / 友链 / 关于 / 主题切换 / EN
+首页 / 博客 / 项目 / 生活 / 关于 / 主题切换 / EN
 ```
 
 英文导航：
 
 ```text
-Home / Blog / Projects / Life / Guestbook / Links / About / Theme Toggle / 中文
+Home / Blog / Projects / Life / About / Theme Toggle / 中文
 ```
 
 说明：
 
+* Header 左侧是头像 + `Sikm` 品牌链接；留言 / 友链不进入主导航，页面仍可通过直接 URL 访问。
 * `Research` 当前保留为内容频道，但不进入主导航；公开详情页统一并入 Blog 路由。
+* 桌面端（≥768px）导航横排在 Header 内；移动端（<768px）导航收起为汉堡按钮，点击在 Header 下方展开下拉面板（支持点击外部 / ESC / 视口变宽时关闭）。
 * 主导航更偏博客小站气质，避免过度研究站化。
 
 ---
 
 # 4. 首页信息架构
 
-## 4.1 Welcome Gate
+## 4.1 Hero
 
-目标：形成每次访问时的进入仪式。
+目标：像 Lil'Log 一样，第一屏直接进入内容，无进入仪式。
 
 当前规则：
 
-* 每次打开首页都会显示欢迎页。
-* 欢迎页是 fixed overlay，不参与正文滚动。
-* 点击「进入小屋」后淡出并轻微上移。
-* 不使用 localStorage 记忆进入状态。
-* 无 JS 情况下正文内容仍在 HTML 中。
+* 首页无 Welcome Gate，打开即是正文。
+* Hero 为纯文字开场：英文固定标题 + 双语副标题 + 单色社交图标行（只渲染配置了链接的平台）。
+* 头像已移至 Header 品牌区（28px 圆形 + `Sikm` 文字）。
 
-当前文案：
+当前标题（两种语言均显示英文）：
 
 ```text
-欢迎来到 sikm 的博客小屋。
-这里存放一些关于 Agent、LLM、工程实践，以及生活切片的长期记录。
+Welcome to Sikm's log
+```
+
+副标题（中文）：
+
+```text
+我是 Sikm，一名 AI 方向研究生。这里长期记录关于 Agent、LLM 与工程实践的笔记，偶尔也会写点生活。
 ```
 
 英文：
 
 ```text
-Welcome to sikm's blog cottage.
-A long-term place for notes on Agent, LLMs, engineering practice, and small fragments of life.
+I'm Sikm, a grad student working on AI. I keep long-term notes here on agents, LLMs, and engineering practice — occasionally life too.
 ```
 
 ## 4.2 首页主体
 
-首页主体采用三栏布局。
+首页主体为单栏布局，全站统一 52rem（832px）中轴。
 
-左栏：
+自上而下：
 
-* 作者头像
-* `sikm`
-* 一段简短介绍
-* GitHub / Bilibili
-* 站内导航
+* Hero（见 4.1）
+* Writing：最新 4 条博客，平面列表行（meta / 标题 / 摘要 / 标签），首条标题略大
+* Projects：最新 3 条项目，平面列表行（status · 日期 / 标题 / 摘要 / stack / 链接）
+* Life：最新 2 条生活记录
 
-中栏：
-
-* 最近写作
-* 开源项目
-
-右栏：
-
-* Now 当前状态
-* Quick Links
-* 留言入口
-* 生活切片
+每个 section 头部是 eyebrow 小标签 + 小号「更多 →」文字链接。
 
 ## 4.3 后续栏目 / 合集
 
@@ -233,10 +225,9 @@ A long-term place for notes on Agent, LLMs, engineering practice, and small frag
 
 ## 4.4 首页取数规则
 
-* `Open Projects`：`projects` 中已发布内容，按 `publishedAt` 倒序取前 3 条
-* `Recent Writing`：`writing` + `research` 中已发布内容合并，按 `publishedAt` 倒序取前 4 条
-* `Life Fragments`：`life` 中已发布内容，按 `publishedAt` 倒序取前 2 条
-* `Now`：当前写在 `src/i18n/ui.ts`，目前为 `最近在研究：Agent`
+* `Projects`：`projects` 中已发布内容，按 `publishedAt` 倒序取前 3 条
+* `Writing`：`writing` + `research` 中已发布内容合并，按 `publishedAt` 倒序取前 4 条
+* `Life`：`life` 中已发布内容，按 `publishedAt` 倒序取前 2 条
 * 所有首页列表都先按当前语言过滤，再排序和截断
 * Research 内容独立存储在 `src/content/research/`，但通过 `/writing/[slug]` 统一展示
 
@@ -250,8 +241,8 @@ A long-term place for notes on Agent, LLMs, engineering practice, and small frag
 
 ```text
 暖纸面
-衬线排版
-editorial / magazine
+全站 sans 排版
+editorial
 克制
 内容优先
 个人研究空间
@@ -261,7 +252,7 @@ editorial / magazine
 
 * 内容优先
 * 大方留白，但首页保持可扫描的信息密度
-* 卡片清晰但不厚重，避免过度玻璃拟态和强阴影
+* 无盒子卡片：列表条目是平面行，用发丝分隔线、留白和 eyebrow 小标签建立层级
 * 少量强调色，以黑色动作按钮、暖色边框和文本层级为主
 * 浅色 / 深色都完整可读
 * 不使用强烈光效、粒子背景、霓虹风、纯装饰渐变
@@ -319,16 +310,21 @@ editorial / magazine
 
 ## 5.4 字体
 
-当前使用 editorial 衬线栈：
+全站使用无衬线栈（西文系统栈 + 中文 MiSans）：
 
 ```css
 font-family:
-  "EB Garamond",
-  "Noto Serif SC",
-  Georgia,
+  -apple-system,
+  BlinkMacSystemFont,
+  "Segoe UI",
+  Roboto,
+  "Helvetica Neue",
+  Arial,
   "MiSans",
   "Noto Sans SC",
-  serif;
+  "PingFang SC",
+  "Microsoft YaHei",
+  sans-serif;
 ```
 
 代码字体：
@@ -341,6 +337,8 @@ font-family:
   "Liberation Mono",
   monospace;
 ```
+
+详见 `dev-docs/自托管字体与阅读体验优化计划.md`（已改写为当前字体方案说明）。
 
 ---
 
@@ -421,13 +419,14 @@ public/images/
 
 已完成：
 
-* Welcome Gate
-* 三栏博客首页
-* 暖纸面 editorial 视觉系统
+* Hero + 单栏名片式首页（无 Welcome Gate）
+* 全站 sans 字体（系统栈 + 自托管 MiSans）
+* 全站统一 52rem 中轴
+* 暖纸面 editorial 视觉系统，平面列表行 + 发丝分隔线
 * 显式浅色 / 深色主题切换
-* 最近写作 / 项目横向图文卡片
-* 图标化社交链接入口
-* Guestbook / Links 占位页
+* 图标化单色社交链接入口
+* Header 品牌区（头像 + Sikm）与移动端汉堡菜单
+* Guestbook / Links 占位页（不进入主导航）
 
 ## V0.5：内容与专题
 
@@ -445,7 +444,7 @@ public/images/
 * Guestbook 轻量留言墙
 * Links 技术资源书签页
 * Life 照片墙
-* 更完整的移动端适配
+* 移动端细节打磨（汉堡菜单已实现）
 
 ## V1.0：上线完善
 

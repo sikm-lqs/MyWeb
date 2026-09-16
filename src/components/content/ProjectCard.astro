@@ -1,5 +1,4 @@
 ---
-import Badge from "../ui/Badge.astro";
 import { formatDate, type SiteLang } from "../../i18n/utils";
 
 interface Props {
@@ -10,12 +9,8 @@ interface Props {
   stack: string[];
   publishedAt?: string;
   lang?: SiteLang;
-  cover?: string;
-  coverAlt?: string;
   repoUrl?: string;
   demoUrl?: string;
-  showStatus?: boolean;
-  variant?: "default" | "compact" | "horizontal";
 }
 
 const {
@@ -26,94 +21,42 @@ const {
   stack,
   publishedAt,
   lang = "zh-CN",
-  cover,
-  coverAlt = "",
   repoUrl,
   demoUrl,
-  showStatus = true,
-  variant = "horizontal",
 } = Astro.props;
-
-const compact = variant === "compact";
-const horizontal = variant === "horizontal" || variant === "default";
-const visibleStack = stack.slice(0, 3);
-const hiddenStackCount = Math.max(stack.length - visibleStack.length, 0);
 ---
 
-<article
-  class:list={[
-    "content-card animated-card group h-full overflow-hidden",
-    horizontal ? "grid md:grid-cols-[minmax(15rem,0.46fr)_minmax(0,1fr)]" : "flex flex-col",
-    compact ? "rounded-[1.15rem]" : "rounded-[1.25rem]",
-  ]}
->
-  <a
-    href={href}
-    class:list={[
-      "content-card-media card-image-link",
-      horizontal ? "md:border-b-0 md:border-r" : "",
-    ]}
-    aria-label={title}
-  >
-    {cover ? (
-      <img
-        src={cover}
-        alt={coverAlt}
-        class:list={[
-          "w-full object-cover",
-          horizontal ? "h-44 md:h-full md:min-h-[11.5rem]" : "h-32 sm:h-36",
-        ]}
-        loading="lazy"
-      />
-    ) : (
-      <div class="card-cover-fallback">
-        <span>{title.slice(0, 2)}</span>
-      </div>
-    )}
-  </a>
-
-  <div class:list={["content-card-body flex flex-1 flex-col", compact ? "gap-2.5 p-3.5 sm:p-4" : "gap-3 p-4 sm:p-5"]}>
-    {publishedAt && (
-      <div class="flex flex-wrap items-center gap-2 text-xs text-[var(--text-subtle)]">
-        <span>{formatDate(publishedAt, lang)}</span>
-      </div>
-    )}
-
-    <div class="flex items-start justify-between gap-3">
-      <h3
-        class:list={[
-          "font-semibold tracking-tight text-[var(--text-main)] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden",
-          compact ? "text-base" : "text-lg sm:text-xl",
-        ]}
-      >
-        <a href={href} class="content-card-title-link">
-          {title}
-        </a>
-      </h3>
-      {showStatus && status && <Badge tone="accent" compact>{status}</Badge>}
-    </div>
-
-    <p class="text-sm leading-6 text-[var(--text-muted)] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] overflow-hidden">
-      {summary}
-    </p>
-
-    <div class="mt-auto flex flex-col gap-2.5">
-      <div class="flex flex-wrap gap-2">
-        {visibleStack.map((item) => <Badge compact>{item}</Badge>)}
-        {hiddenStackCount > 0 && <Badge compact>{`+${hiddenStackCount}`}</Badge>}
-      </div>
-      <div class:list={["content-card-links flex flex-wrap items-center text-sm text-[var(--text-muted)]", compact ? "gap-3 pt-2" : "gap-4 pt-2.5"]}>
-        {repoUrl && (
-          <a href={repoUrl} target="_blank" rel="noreferrer" class="relative z-10 hover:text-[var(--text-main)]">
-            GitHub
-          </a>
-        )}
-        {demoUrl && (
-          <a href={demoUrl} target="_blank" rel="noreferrer" class="relative z-10 hover:text-[var(--text-main)]">
-            Demo
-          </a>
-        )}
-      </div>
-    </div>
+<article class="flat-item">
+  <div class="flat-item-meta">
+    {status && <span>{status}</span>}
+    {status && publishedAt && <span aria-hidden="true">·</span>}
+    {publishedAt && <span>{formatDate(publishedAt, lang)}</span>}
   </div>
+
+  <h3 class="flat-item-title">
+    <a href={href} class="content-card-title-link">
+      {title}
+    </a>
+  </h3>
+
+  <p class="flat-item-summary flat-item-summary-single">{summary}</p>
+
+  {stack.length > 0 && (
+    <p class="flat-item-tags">{stack.join(" · ")}</p>
+  )}
+
+  {(repoUrl || demoUrl) && (
+    <div class="flat-item-links">
+      {repoUrl && (
+        <a href={repoUrl} target="_blank" rel="noreferrer">
+          GitHub
+        </a>
+      )}
+      {demoUrl && (
+        <a href={demoUrl} target="_blank" rel="noreferrer">
+          Demo
+        </a>
+      )}
+    </div>
+  )}
 </article>

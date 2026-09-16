@@ -38,7 +38,7 @@ Required Node.js version: `>=22.12.0`
 
 Implemented:
 
-- Chinese and English home pages with a Welcome Gate entry
+- Chinese and English home pages with a hero-led single-column layout
 - Chinese and English About pages
 - Three public content channels: `writing`, `projects`, `life`
 - Blog pages aggregate `writing` and the internal `research` content source
@@ -49,8 +49,9 @@ Implemented:
 - Fallback to the target-language collection page when a translation is missing
 - Explicit light/dark theme switching
 - Home page data queries for latest projects, latest blog entries, and life notes
-- Three-column home layout with profile/navigation, latest content, projects, and side widgets
-- Warm editorial visual system based on paper tones, serif typography, soft borders, and restrained cards
+- Single-column home layout with a hero (avatar, English welcome title, bio, social links) followed by latest Writing / Projects / Life sections
+- Header brand (28px avatar + "Sikm") and a hamburger mobile menu below 768px (dropdown panel, ESC/outside-click/resize to close)
+- Warm editorial visual system based on paper tones, sans typography, hairline dividers, and restrained flat rows
 - Icon-based social links; the GitHub profile is `https://github.com/sikm-lqs`
 - Placeholder avatar and cover images
 
@@ -145,9 +146,9 @@ The implemented UI follows the tokens and component styles in `src/styles/global
 
 - Light mode uses warm paper tones such as `#f4efe6`, `#eae3d5`, and `#d4c9b8`.
 - Dark mode uses warm near-black surfaces and muted paper borders.
-- Typography is editorial: `EB Garamond` + `Noto Serif SC`, with sans-serif Chinese fonts kept as fallback.
-- The home page is a Welcome Gate plus a three-column content dashboard.
-- Use borders, spacing, cover images, badges, and subtle hover movement for hierarchy.
+- Typography is all sans: system Latin stack with `MiSans` / `Noto Sans SC` for Chinese, at weights 400/500/600.
+- The home page is a single-column personal card layout: a hero ("Welcome to Sikm's log") followed by Writing / Projects / Life sections.
+- Use whitespace, hairline dividers, eyebrow-style section labels, and restrained text links for hierarchy; home and list entries are flat rows without card boxes.
 - Avoid strong gradients, neon effects, particle backgrounds, or marketing-page composition.
 
 ## Agent Guidelines

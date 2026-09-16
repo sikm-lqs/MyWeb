@@ -1,14 +1,10 @@
 # MyWeb
 
-MyWeb 是 sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、工程实践、项目记录和少量生活切片。
+MyWeb 是 Sikm 的双语个人研究小站，用于长期沉淀 Agent / LLM、工程实践、项目记录和少量生活切片。
 
-当前版本采用暖纸面、衬线字体和低饱和边框构成的 editorial / magazine 风格：它更像一个长期维护的个人研究小站，而不是营销落地页或一次性简历页。
+当前版本采用暖纸面、全站无衬线字体（西文系统栈 + 中文 MiSans）和低饱和发丝分隔线构成的 editorial 风格：它更像一个长期维护的个人研究小站，而不是营销落地页或一次性简历页。
 
-* 每次打开首页先进入沉浸式欢迎页
-* 点击「进入小屋」后进入三栏博客首页
-* 左侧为作者卡和站内导航
-* 中间为最近写作和开源项目
-* 右侧为 Now、Quick Links、留言入口和生活切片
+* 首页为单栏个人名片形态：hero（头像、英文欢迎标题、简介、社交链接）+ Writing / Projects / Life 三个最新内容区
 * 支持中英文双语
 * 支持显式浅色 / 深色主题切换
 * 个人链接统一使用图标化入口，GitHub username 为 `sikm-lqs`
@@ -56,9 +52,7 @@ https://myweb-649.pages.dev/
 已完成：
 
 * 中英文首页
-* 沉浸式欢迎页入口
-* 三栏博客首页布局
-* 作者卡、Now、Quick Links
+* 首页 hero + Writing / Projects / Life 单栏布局
 * 显式浅色 / 深色主题切换
 * 中英文 About 页面
 * Blog / Projects / Research / Life 四个内容频道
@@ -71,7 +65,7 @@ https://myweb-649.pages.dev/
 
 当前状态：
 
-* 视觉方向已定为暖色纸面、衬线排版、克制卡片和内容优先的个人研究空间
+* 视觉方向已定为暖色纸面、全站 sans 排版、发丝分隔线和内容优先的个人研究空间
 * 当前内容仍以示例内容和占位资源为主
 * 后续重点是补充真实内容、完善留言墙 / 友链 / 生活照片墙
 
@@ -81,10 +75,10 @@ https://myweb-649.pages.dev/
 
 * 浅色模式使用暖纸色背景，例如 `#f4efe6`、`#eae3d5`
 * 深色模式使用低亮度暖黑和纸质边框色
-* 正文字体以 `EB Garamond` + `Noto Serif SC` 为主，保留 `MiSans` / `Noto Sans SC` 作为中文 fallback
-* 页面通过细边框、留白、轻微网格肌理和 hover 微位移建立层级
+* 全站字体为无衬线：西文用系统栈（零加载），中文用自托管 `MiSans` / `Noto Sans SC`
+* 页面通过发丝分隔线、留白和轻微网格肌理建立层级，列表条目为无盒子的平面行
 * 不使用强烈渐变、霓虹、粒子背景或过度装饰
-* 组件应优先复用 `ArticleCard`、`ProjectCard`、`Badge`、`Button`、`SectionTitle` 和现有 layout
+* 组件应优先复用 `ArticleCard`、`ProjectCard`、`Button`、`SocialLink` 和现有 layout
 
 ## 后续开发
 

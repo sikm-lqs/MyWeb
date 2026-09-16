@@ -1,8 +1,29 @@
 ---
 import Container from "./Container.astro";
+import { ui } from "../../i18n/ui";
+import {
+  getAboutPath,
+  getCollectionPath,
+  type SiteLang,
+} from "../../i18n/utils";
+
+interface Props {
+  lang: SiteLang;
+}
+
+const { lang } = Astro.props;
+const copy = ui[lang];
 ---
 
-<footer class="mt-20 py-10">
+<footer class="site-footer">
   <Container>
+    <div class="site-footer-inner">
+      <span>© 2026 Sikm</span>
+      <nav class="site-footer-nav" aria-label="Footer">
+        <a href={getCollectionPath("writing", lang)}>{copy.nav.writing}</a>
+        <a href={getCollectionPath("projects", lang)}>{copy.nav.projects}</a>
+        <a href={getAboutPath(lang)}>{copy.nav.about}</a>
+      </nav>
+    </div>
   </Container>
 </footer>

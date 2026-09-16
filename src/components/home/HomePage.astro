@@ -1,7 +1,5 @@
 ---
 import Container from "../layout/Container.astro";
-import Badge from "../ui/Badge.astro";
-import SectionTitle from "../ui/SectionTitle.astro";
 import SocialLink from "../ui/SocialLink.astro";
 import ArticleCard from "../content/ArticleCard.astro";
 import ProjectCard from "../content/ProjectCard.astro";
@@ -17,11 +15,7 @@ import {
   WECHAT_URL,
   XIAOHONGSHU_HANDLE,
   XIAOHONGSHU_URL,
-  getAboutPath,
   getCollectionPath,
-  getFriendsPath,
-  getGuestbookPath,
-  PROFILE_AVATAR_SRC,
   type SiteLang,
 } from "../../i18n/utils";
 import {
@@ -43,194 +37,93 @@ const [latestProjects, latestBlog, latestLife] = await Promise.all([
   getLatestEntries("life", lang, 2),
 ]);
 
-const sideNavItems = [
-  { href: getCollectionPath("writing", lang), label: copy.nav.writing },
-  { href: getCollectionPath("projects", lang), label: copy.nav.projects },
-  { href: getCollectionPath("life", lang), label: copy.nav.life },
-  { href: getGuestbookPath(lang), label: copy.nav.guestbook },
-  { href: getFriendsPath(lang), label: copy.nav.friends },
-  { href: getAboutPath(lang), label: copy.nav.about },
-];
+const socials = [
+  { platform: "github", href: GITHUB_URL, label: copy.labels.github, handle: GITHUB_HANDLE },
+  { platform: "bilibili", href: BILIBILI_URL, label: copy.labels.bilibili, handle: BILIBILI_HANDLE },
+  { platform: "x", href: X_URL, label: copy.labels.x, handle: X_HANDLE },
+  { platform: "xiaohongshu", href: XIAOHONGSHU_URL, label: copy.labels.xiaohongshu, handle: XIAOHONGSHU_HANDLE },
+  { platform: "wechat", href: WECHAT_URL, label: copy.labels.wechat, handle: WECHAT_HANDLE },
+] as const;
+const availableSocials = socials.filter((item) => item.href.length > 0);
 ---
 
-  <div class="welcome-gate" data-welcome-gate>
-    <div class="welcome-poster">
-      <div class="welcome-avatar">
-        <img src={PROFILE_AVATAR_SRC} alt="sikm avatar" loading="eager" />
-      </div>
-
-      <div class="welcome-copy">
-        <p class="eyebrow">{copy.hero.eyebrow}</p>
-        <h1 class="font-serif">{copy.home.welcomeTitle}</h1>
-        <p>{copy.home.welcomeDescription}</p>
-        <div class="welcome-actions">
-          <button type="button" data-enter-site>{copy.home.welcomeCta}</button>
-          <a href={getCollectionPath("writing", lang)}>{copy.hero.primaryCta}</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
 <Container>
-  <div class="home-dashboard">
-    <aside class="profile-rail">
-      <section class="profile-card">
-        <img src={PROFILE_AVATAR_SRC} alt="sikm avatar" loading="lazy" />
-        <h2>sikm</h2>
-        <p>{copy.hero.description}</p>
-        <div class="profile-links">
-          <SocialLink platform="github" href={GITHUB_URL} label={copy.labels.github} handle={GITHUB_HANDLE} compact iconOnly />
-          <SocialLink platform="bilibili" href={BILIBILI_URL} label={copy.labels.bilibili} handle={BILIBILI_HANDLE} compact iconOnly />
-          <SocialLink platform="x" href={X_URL} label={copy.labels.x} handle={X_HANDLE} compact iconOnly />
-          <SocialLink platform="xiaohongshu" href={XIAOHONGSHU_URL} label={copy.labels.xiaohongshu} handle={XIAOHONGSHU_HANDLE} compact iconOnly />
-          <SocialLink platform="wechat" href={WECHAT_URL} label={copy.labels.wechat} handle={WECHAT_HANDLE} compact iconOnly />
-        </div>
-      </section>
+  <section class="home-hero">
+    <h1>Welcome to Sikm's log</h1>
+    <p class="home-hero-subtitle">{copy.home.heroSubtitle}</p>
+    <div class="home-hero-links">
+      {availableSocials.map((item) => (
+        <SocialLink
+          platform={item.platform}
+          href={item.href}
+          label={item.label}
+          handle={item.handle}
+          iconOnly
+        />
+      ))}
+    </div>
+  </section>
 
-      <nav class="side-nav" aria-label="Home navigation">
-        {sideNavItems.map((item) => (
-          <a href={item.href}>{item.label}</a>
+    <section class="home-section">
+      <div class="section-heading-row">
+        <p class="section-eyebrow">{copy.home.writingTitle}</p>
+        <a href={getCollectionPath("writing", lang)}>{copy.labels.more} →</a>
+      </div>
+      <div class="flat-list">
+        {latestBlog.map((entry, index) => (
+          <ArticleCard
+            href={getBlogEntryPath(lang, entry)}
+            title={entry.data.title}
+            summary={entry.data.summary}
+            publishedAt={entry.data.publishedAt}
+            tags={entry.data.tags}
+            readTime={entry.data.readTime}
+            lang={lang}
+            featured={index === 0}
+          />
         ))}
-      </nav>
-    </aside>
+      </div>
+    </section>
 
-    <main class="content-feed">
-      <section class="feed-section">
-        <div class="section-heading-row">
-          <SectionTitle
-            title={copy.home.writingTitle}
-            description={copy.home.writingDescription}
+    <section class="home-section">
+      <div class="section-heading-row">
+        <p class="section-eyebrow">{copy.home.projectsTitle}</p>
+        <a href={getCollectionPath("projects", lang)}>{copy.labels.more} →</a>
+      </div>
+      <div class="flat-list">
+        {latestProjects.map((entry) => (
+          <ProjectCard
+            href={getEntryPath("projects", lang, entry)}
+            title={entry.data.title}
+            summary={entry.data.summary}
+            status={entry.data.status}
+            stack={entry.data.stack}
+            publishedAt={entry.data.publishedAt}
+            lang={lang}
+            repoUrl={entry.data.repoUrl}
+            demoUrl={entry.data.demoUrl}
           />
-          <a href={getCollectionPath("writing", lang)}>{copy.labels.more}</a>
-        </div>
-        <div class="article-stream">
-          {latestBlog.map((entry, index) => (
-            <ArticleCard
-              href={getBlogEntryPath(lang, entry)}
-              title={entry.data.title}
-              summary={entry.data.summary}
-              publishedAt={entry.data.publishedAt}
-              tags={entry.data.tags}
-              readTime={entry.data.readTime}
-              lang={lang}
-              cover={entry.data.cover}
-              coverAlt={entry.data.coverAlt}
-              variant={index === 0 ? "featured" : "horizontal"}
-            />
-          ))}
-        </div>
-      </section>
+        ))}
+      </div>
+    </section>
 
-      <section class="feed-section">
-        <div class="section-heading-row">
-          <SectionTitle
-            title={copy.home.projectsTitle}
-            description={copy.home.projectsDescription}
+    <section class="home-section">
+      <div class="section-heading-row">
+        <p class="section-eyebrow">{copy.home.lifeTitle}</p>
+        <a href={getCollectionPath("life", lang)}>{copy.labels.more} →</a>
+      </div>
+      <div class="flat-list">
+        {latestLife.map((entry) => (
+          <ArticleCard
+            href={getEntryPath("life", lang, entry)}
+            title={entry.data.title}
+            summary={entry.data.summary}
+            publishedAt={entry.data.publishedAt}
+            tags={entry.data.tags}
+            readTime={entry.data.readTime}
+            lang={lang}
           />
-          <a href={getCollectionPath("projects", lang)}>{copy.labels.more}</a>
-        </div>
-        <div class="project-stream">
-          {latestProjects.map((entry) => (
-            <ProjectCard
-              href={getEntryPath("projects", lang, entry)}
-              title={entry.data.title}
-              summary={entry.data.summary}
-              status={entry.data.status}
-              stack={entry.data.stack}
-              publishedAt={entry.data.publishedAt}
-              lang={lang}
-              cover={entry.data.cover}
-              coverAlt={entry.data.coverAlt}
-              repoUrl={entry.data.repoUrl}
-              demoUrl={entry.data.demoUrl}
-              variant="horizontal"
-            />
-          ))}
-        </div>
-      </section>
-    </main>
-
-    <aside class="widget-rail">
-      <section class="widget-card">
-        <p class="eyebrow">{copy.home.nowTitle}</p>
-        <h2>{copy.home.focusTitle}</h2>
-        <div class="widget-list">
-          {copy.home.nowItems.map((item) => (
-            <div>
-              <span>{item.label}</span>
-              <strong>{item.value}</strong>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section class="widget-card">
-        <p class="eyebrow">Quick Links</p>
-        <div class="quick-links">
-          <a class="quick-link-row" href={GITHUB_URL} target="_blank" rel="noreferrer">
-            <SocialLink platform="github" label={copy.labels.github} compact iconOnly />
-            <span>{`github.com/${GITHUB_HANDLE}`}</span>
-          </a>
-          <a class="quick-link-row" href={BILIBILI_URL} target="_blank" rel="noreferrer">
-            <SocialLink platform="bilibili" label={copy.labels.bilibili} compact iconOnly />
-            <span>{`bilibili.com/${BILIBILI_HANDLE}`}</span>
-          </a>
-          <a class="quick-link-row" href={X_URL} target="_blank" rel="noreferrer">
-            <SocialLink platform="x" label={copy.labels.x} compact iconOnly />
-            <span>{`x.com/${X_HANDLE}`}</span>
-          </a>
-          <span class="quick-link-row is-disabled">
-            <SocialLink platform="xiaohongshu" label={copy.labels.xiaohongshu} compact iconOnly />
-            <span>{lang === "zh-CN" ? "小红书链接待补充" : "RED link coming soon"}</span>
-          </span>
-          <span class="quick-link-row is-disabled">
-            <SocialLink platform="wechat" label={copy.labels.wechat} compact iconOnly />
-            <span>{lang === "zh-CN" ? "微信公众号待补充" : "WeChat link coming soon"}</span>
-          </span>
-          <a class="quick-link-row" href={getFriendsPath(lang)}>
-            <span class="quick-link-text-icon" aria-hidden="true">{lang === "zh-CN" ? "友" : "L"}</span>
-            <span>{copy.nav.friends}</span>
-          </a>
-        </div>
-      </section>
-
-      <section class="widget-card">
-        <p class="eyebrow">{copy.nav.guestbook}</p>
-        <h2>{copy.nav.guestbook}</h2>
-        <p>{lang === "zh-CN" ? "留一句话，像在博客小屋门口放下一张纸条。" : "Leave a small note at the door of the blog cottage."}</p>
-        <a class="widget-cta" href={getGuestbookPath(lang)}>
-          {lang === "zh-CN" ? "去留言" : "Open guestbook"}
-        </a>
-      </section>
-
-      <section class="widget-card">
-        <p class="eyebrow">{copy.home.lifeTitle}</p>
-        <h2>{copy.home.lifeTeaserTitle}</h2>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <Badge compact>photo</Badge>
-          <Badge compact>training</Badge>
-          <Badge compact>reading</Badge>
-        </div>
-        <div class="life-mini-list">
-          {latestLife.map((entry) => (
-            <a href={getEntryPath("life", lang, entry)}>
-              <span>{entry.data.title}</span>
-            </a>
-          ))}
-        </div>
-      </section>
-    </aside>
-  </div>
+        ))}
+      </div>
+    </section>
 </Container>
-
-<script>
-  const gate = document.querySelector<HTMLElement>("[data-welcome-gate]");
-  const enterButton = document.querySelector<HTMLButtonElement>("[data-enter-site]");
-
-  enterButton?.addEventListener("click", () => {
-    gate?.classList.add("is-leaving");
-    window.setTimeout(() => {
-      gate?.remove();
-    }, 680);
-  });
-</script>

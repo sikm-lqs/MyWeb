@@ -5,43 +5,15 @@ type Dictionary = {
     home: string;
     writing: string;
     projects: string;
-    research: string;
     life: string;
-    guestbook: string;
-    friends: string;
     about: string;
     languageSwitch: string;
   };
-  hero: {
-    eyebrow: string;
-    title: string;
-    subtitle: string;
-    description: string;
-    primaryCta: string;
-    secondaryCta: string;
-  };
   home: {
-    welcomeTitle: string;
-    welcomeDescription: string;
-    welcomeCta: string;
-    nowTitle: string;
-    nowDescription: string;
-    nowItems: {
-      label: string;
-      value: string;
-    }[];
-    focusTitle: string;
-    focusDescription: string;
+    heroSubtitle: string;
     projectsTitle: string;
-    projectsDescription: string;
     writingTitle: string;
-    writingDescription: string;
-    researchTitle: string;
-    researchDescription: string;
     lifeTitle: string;
-    lifeDescription: string;
-    lifeTeaserTitle: string;
-    lifeTeaserDescription: string;
   };
   collections: Record<
     SiteCollection,
@@ -52,15 +24,9 @@ type Dictionary = {
     }
   >;
   labels: {
-    latest: string;
-    featured: string;
-    currentFocus: string;
-    readingTime: string;
     updatedAt: string;
-    projectStatus: string;
-    stack: string;
-    links: string;
     more: string;
+    menu: string;
     github: string;
     bilibili: string;
     x: string;
@@ -68,8 +34,6 @@ type Dictionary = {
     wechat: string;
     demo: string;
     caseStudy: string;
-    noTranslation: string;
-    backToList: string;
   };
   about: {
     eyebrow: string;
@@ -84,7 +48,6 @@ type Dictionary = {
     contactTitle: string;
     contactBody: string;
   };
-  footer: string;
   currentFocus: string[];
 };
 
@@ -94,47 +57,16 @@ export const ui: Record<SiteLang, Dictionary> = {
       home: "首页",
       writing: "博客",
       projects: "项目",
-      research: "研究",
       life: "生活",
-      guestbook: "留言",
-      friends: "友链",
       about: "关于",
       languageSwitch: "EN",
     },
-    hero: {
-      eyebrow: "Agent / LLM Research & Building",
-      title: "你好，我是 sikm。",
-      subtitle: "Agent / LLM 算法方向研究生",
-      description:
-        "你好，我是 sikm！一个努力避免摸鱼的 AI 方向研究生。关注 Agent、RL 和大模型，也会在这里记录有趣项目、论文阅读和技术博客。",
-      primaryCta: "阅读博客",
-      secondaryCta: "查看项目",
-    },
     home: {
-      welcomeTitle: "欢迎来到 sikm 的博客小屋。",
-      welcomeDescription:
-        "这里存放一些关于 Agent、LLM、工程实践，以及生活切片的长期记录。",
-      welcomeCta: "进入小屋",
-      nowTitle: "当前状态",
-      nowDescription: "桌面上暂时只放一张便签，记录此刻最真实的关注。",
-      nowItems: [
-        {
-          label: "最近在研究",
-          value: "Agent",
-        },
-      ],
-      focusTitle: "当前关注",
-      focusDescription: "Agent 设计、评测和 harness。",
+      heroSubtitle:
+        "我是 Sikm，一名 AI 方向研究生。这里长期记录关于 Agent、LLM 与工程实践的笔记，偶尔也会写点生活。",
       projectsTitle: "项目小集",
-      projectsDescription: "围绕 AI、Agent 和效率工具的项目实践。",
       writingTitle: "博客笔记",
-      writingDescription: "论文阅读、工程观察和 AI 工具实践的整理与分享。",
-      researchTitle: "研究笔记",
-      researchDescription: "论文阅读、实验观察和问题拆解。",
       lifeTitle: "生活切片",
-      lifeDescription: "首页只放一点生活的光，真正的生活页后续以照片墙为主。",
-      lifeTeaserTitle: "照片墙会放在这里慢慢长出来",
-      lifeTeaserDescription: "训练、阅读、日常与一些不太需要解释的瞬间，会成为博客小屋里的窗。",
     },
     collections: {
       writing: {
@@ -159,15 +91,9 @@ export const ui: Record<SiteLang, Dictionary> = {
       },
     },
     labels: {
-      latest: "最新",
-      featured: "精选",
-      currentFocus: "Current Focus",
-      readingTime: "阅读时间",
       updatedAt: "更新于",
-      projectStatus: "项目状态",
-      stack: "技术栈",
-      links: "相关链接",
       more: "更多",
+      menu: "菜单",
       github: "GitHub",
       bilibili: "Bilibili",
       x: "X",
@@ -175,8 +101,6 @@ export const ui: Record<SiteLang, Dictionary> = {
       wechat: "微信公众号",
       demo: "Demo",
       caseStudy: "案例分析",
-      noTranslation: "该内容暂无对应英文版本，已回退到列表页。",
-      backToList: "返回列表",
     },
     about: {
       eyebrow: "About",
@@ -196,7 +120,6 @@ export const ui: Record<SiteLang, Dictionary> = {
       contactBody:
         "GitHub、邮箱与公开渠道将在正式上线前补充。当前版本先完成信息结构、内容系统和多语言框架。",
     },
-    footer: "",
     currentFocus: ["LLM", "Agent", "RL"],
   },
   en: {
@@ -204,47 +127,16 @@ export const ui: Record<SiteLang, Dictionary> = {
       home: "Home",
       writing: "Blog",
       projects: "Projects",
-      research: "Research",
       life: "Life",
-      guestbook: "Guestbook",
-      friends: "Links",
       about: "About",
       languageSwitch: "中文",
     },
-    hero: {
-      eyebrow: "Agent / LLM Research & Building",
-      title: "Hi, I’m sikm.",
-      subtitle: "Agent / LLM Algorithm Graduate Student",
-      description:
-        "Hi, I am sikm, an AI graduate student trying hard not to slack off. I focus on Agent, RL, and large models, and write about interesting projects, paper reading, and technical notes.",
-      primaryCta: "Read blog",
-      secondaryCta: "View projects",
-    },
     home: {
-      welcomeTitle: "Welcome to sikm's blog cottage.",
-      welcomeDescription:
-        "A long-term place for notes on Agent, LLMs, engineering practice, and small fragments of life.",
-      welcomeCta: "Enter",
-      nowTitle: "Now",
-      nowDescription: "A small desk note for what is actually holding my attention.",
-      nowItems: [
-        {
-          label: "Researching",
-          value: "Agent",
-        },
-      ],
-      focusTitle: "Current focus",
-      focusDescription: "Agent design, evaluation, and harness work.",
+      heroSubtitle:
+        "I'm Sikm, a grad student working on AI. I keep long-term notes here on agents, LLMs, and engineering practice — occasionally life too.",
       projectsTitle: "Project Notes",
-      projectsDescription: "Project practice around AI, Agent systems, and productivity tools.",
       writingTitle: "Blog Notes",
-      writingDescription: "Paper reading, engineering observations, and notes on AI tools.",
-      researchTitle: "Research notes",
-      researchDescription: "Paper reading, experiment observations, and question breakdowns.",
       lifeTitle: "Life fragments",
-      lifeDescription: "Only a small glimmer on the home page; the life page can grow into a photo wall later.",
-      lifeTeaserTitle: "A photo wall will grow here",
-      lifeTeaserDescription: "Training, reading, daily scenes, and moments that do not need much explanation.",
     },
     collections: {
       writing: {
@@ -269,15 +161,9 @@ export const ui: Record<SiteLang, Dictionary> = {
       },
     },
     labels: {
-      latest: "Latest",
-      featured: "Featured",
-      currentFocus: "Current Focus",
-      readingTime: "Reading time",
       updatedAt: "Updated",
-      projectStatus: "Status",
-      stack: "Stack",
-      links: "Links",
       more: "More",
+      menu: "Menu",
       github: "GitHub",
       bilibili: "Bilibili",
       x: "X",
@@ -285,8 +171,6 @@ export const ui: Record<SiteLang, Dictionary> = {
       wechat: "WeChat",
       demo: "Demo",
       caseStudy: "Case Study",
-      noTranslation: "This entry has no translation yet, so the switch falls back to the list page.",
-      backToList: "Back to list",
     },
     about: {
       eyebrow: "About",
@@ -306,7 +190,6 @@ export const ui: Record<SiteLang, Dictionary> = {
       contactBody:
         "GitHub, email, and public contact channels will be added before the public launch. This iteration focuses on structure, content workflows, and bilingual delivery.",
     },
-    footer: "",
     currentFocus: ["LLM", "Agent", "RL"],
   },
 };
