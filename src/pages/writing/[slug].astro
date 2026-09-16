@@ -1,47 +1,31 @@
 ---
-import { getCollection, render } from "astro:content";
+import { getCollection, render, type CollectionEntry } from "astro:content";
 import ArticleLayout from "../../layouts/ArticleLayout.astro";
 import {
   getCollectionPath,
 } from "../../i18n/utils";
 import {
-  getBlogEntryPath,
-  getTranslatedBlogEntry,
+  getEntryPath,
+  getTranslatedEntry,
   computeWordCount,
-  type BlogEntry,
-  type BlogSourceCollection,
 } from "../../lib/content/translations";
 
 export async function getStaticPaths() {
-  const [writingEntries, researchEntries] = await Promise.all([
-    getCollection(
-      "writing",
-      ({ data }) => !data.draft && data.lang === "zh-CN",
-    ),
-    getCollection(
-      "research",
-      ({ data }) => !data.draft && data.lang === "zh-CN",
-    ),
-  ]);
+  const entries = await getCollection(
+    "writing",
+    ({ data }) => !data.draft && data.lang === "zh-CN",
+  );
 
-  const entries = [
-    ...writingEntries.map((entry) => ({ entry, sourceCollection: "writing" as const })),
-    ...researchEntries.map((entry) => ({ entry, sourceCollection: "research" as const })),
-  ];
-
-  return entries.map(({ entry, sourceCollection }) => ({
+  return entries.map((entry) => ({
     params: { slug: entry.data.routeSlug },
-    props: { entry, sourceCollection },
+    props: { entry },
   }));
 }
 
-const { entry, sourceCollection } = Astro.props as {
-  entry: BlogEntry;
-  sourceCollection: BlogSourceCollection;
-};
+const { entry } = Astro.props as { entry: CollectionEntry<"writing"> };
 const { Content } = await render(entry);
-const translation = await getTranslatedBlogEntry(sourceCollection, entry, "en");
-const wordCount = await computeWordCount(sourceCollection, "zh-CN", entry.data.routeSlug);
+const translation = await getTranslatedEntry("writing", entry, "en");
+const wordCount = await computeWordCount("writing", "zh-CN", entry.data.routeSlug);
 ---
 
 <ArticleLayout
@@ -49,7 +33,7 @@ const wordCount = await computeWordCount(sourceCollection, "zh-CN", entry.data.r
   description={entry.data.summary}
   lang="zh-CN"
   currentPath={Astro.url.pathname}
-  translationHref={translation ? getBlogEntryPath("en", translation) : getCollectionPath("writing", "en")}
+  translationHref={translation ? getEntryPath("writing", "en", translation) : getCollectionPath("writing", "en")}
   collection="writing"
   publishedAt={entry.data.publishedAt}
   updatedAt={entry.data.updatedAt}

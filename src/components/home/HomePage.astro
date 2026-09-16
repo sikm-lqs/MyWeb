@@ -19,9 +19,7 @@ import {
   type SiteLang,
 } from "../../i18n/utils";
 import {
-  getBlogEntryPath,
   getEntryPath,
-  getLatestBlogEntries,
   getLatestEntries,
 } from "../../lib/content/translations";
 
@@ -33,7 +31,7 @@ const { lang } = Astro.props;
 const copy = ui[lang];
 const [latestProjects, latestBlog, latestLife] = await Promise.all([
   getLatestEntries("projects", lang, 3),
-  getLatestBlogEntries(lang, 4),
+  getLatestEntries("writing", lang, 4),
   getLatestEntries("life", lang, 2),
 ]);
 
@@ -72,7 +70,7 @@ const availableSocials = socials.filter((item) => item.href.length > 0);
       <div class="flat-list">
         {latestBlog.map((entry, index) => (
           <ArticleCard
-            href={getBlogEntryPath(lang, entry)}
+            href={getEntryPath("writing", lang, entry)}
             title={entry.data.title}
             summary={entry.data.summary}
             publishedAt={entry.data.publishedAt}

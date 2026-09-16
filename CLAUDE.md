@@ -36,7 +36,7 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - 显式浅色 / 深色主题切换
 - 中英文 About 页面
 - `writing` / `projects` / `life` 三个公开内容频道
-- Blog 入口聚合 `writing` 与内部 `research` 内容源
+- Blog 入口由 `writing` 集合统一承载，包含技术文章、论文笔记和工程思考
 - 三类公开内容的列表页与详情页
 - Guestbook / Friends 中英文占位页
 - `/` 中文路由与 `/en` 英文路由
@@ -75,7 +75,6 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 │   ├── content/                      # 文件驱动内容
 │   │   ├── writing/{zh,en}/
 │   │   ├── projects/{zh,en}/
-│   │   ├── research/{zh,en}/          # 内部内容源，公开路由并入 Blog
 │   │   └── life/{zh,en}/
 │   ├── i18n/                         # 文案、语言、路由工具
 │   ├── layouts/                      # BaseLayout、ArticleLayout、ProjectLayout
@@ -92,8 +91,8 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 
 内容集合定义在 `src/content.config.ts`：
 
-- `writing`、`research`、`life` 使用通用文章 schema，可选 `readTime`
-- 公开 Blog 入口使用 `/writing`，同时聚合 `writing` 和 `research` 两个内容源
+- `writing`、`life` 使用通用文章 schema，可选 `readTime`
+- 公开 Blog 入口使用 `/writing`，由 `writing` 集合承载
 - `projects` 额外包含 `status`、`stack`、`repoUrl`、`demoUrl`、`caseStudyUrl`
 - 支持语言：`zh-CN`、`en`
 - `draft: true` 的内容不会进入列表页或首页
@@ -108,21 +107,18 @@ MyWeb 是一个双语个人网站，用于长期沉淀 Agent / LLM 算法方向�
 - 英文首页：`/en`
 - 中文详情页示例：`/writing/agent-state-management`
 - 英文详情页示例：`/en/writing/agent-state-management`
-- 原 `research` 内容不再有独立一级栏目，详情页生成在 `/writing/{routeSlug}` 与 `/en/writing/{routeSlug}`
 - 语言切换优先查找同集合、同 `translationKey`、目标语言且非草稿的内容
 - 找不到翻译时回退到目标语言的集合列表页
 
 首页当前按发布时间倒序自动取数：
 
 - Open Projects：`projects` 中已发布内容，最多 3 条
-- Latest Blog：`writing` 与 `research` 中已发布内容合并后，最多 4 条
+- Latest Blog：`writing` 中已发布内容，最多 4 条
 - Life Notes：`life` 中已发布内容，最多 2 条
 
 ## 当前 TODO
 
 - 继续检查移动端首屏与 Blog/Projects 并排区块的视觉密度
-- 后续可把 `src/content/research` 逐步迁移或重命名为更通用的 blog 子目录
-- 为旧 `/research/*` 链接补充重定向策略，避免正式上线后断链
 
 ## 视觉基线
 

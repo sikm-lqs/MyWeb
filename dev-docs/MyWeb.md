@@ -38,7 +38,7 @@ Hero + 单栏名片式首页 + 暖纸面 sans editorial 视觉系统
 访问首页时直接进入正文，无欢迎页。首页自上而下：
 
 1. Hero：固定英文标题 `Welcome to Sikm's log`、一段简介、单色社交图标行
-2. Writing：最新 4 条博客（聚合 writing + research）
+2. Writing：最新 4 条博客（`writing` 集合）
 3. Projects：最新 3 条项目
 4. Life：最新 2 条生活记录
 
@@ -159,7 +159,6 @@ Home / Blog / Projects / Life / About / Theme Toggle / 中文
 说明：
 
 * Header 左侧是头像 + `Sikm` 品牌链接；留言 / 友链不进入主导航，页面仍可通过直接 URL 访问。
-* `Research` 当前保留为内容频道，但不进入主导航；公开详情页统一并入 Blog 路由。
 * 桌面端（≥768px）导航横排在 Header 内；移动端（<768px）导航收起为汉堡按钮，点击在 Header 下方展开下拉面板（支持点击外部 / ESC / 视口变宽时关闭）。
 * 主导航更偏博客小站气质，避免过度研究站化。
 
@@ -226,10 +225,9 @@ I'm Sikm, a grad student working on AI. I keep long-term notes here on agents, L
 ## 4.4 首页取数规则
 
 * `Projects`：`projects` 中已发布内容，按 `publishedAt` 倒序取前 3 条
-* `Writing`：`writing` + `research` 中已发布内容合并，按 `publishedAt` 倒序取前 4 条
+* `Writing`：`writing` 中已发布内容，按 `publishedAt` 倒序取前 4 条
 * `Life`：`life` 中已发布内容，按 `publishedAt` 倒序取前 2 条
 * 所有首页列表都先按当前语言过滤，再排序和截断
-* Research 内容独立存储在 `src/content/research/`，但通过 `/writing/[slug]` 统一展示
 
 ---
 
@@ -346,12 +344,11 @@ font-family:
 
 ## 6.1 Content Collections
 
-当前四类内容：
+当前三类内容：
 
 ```text
 writing
 projects
-research
 life
 ```
 
@@ -363,9 +360,6 @@ src/content/
     zh/
     en/
   projects/
-    zh/
-    en/
-  research/
     zh/
     en/
   life/
@@ -397,7 +391,6 @@ public/images/
   profile/
   writing/
   projects/
-  research/
   life/
 ```
 

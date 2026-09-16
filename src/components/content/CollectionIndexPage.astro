@@ -4,9 +4,7 @@ import ProjectCard from "./ProjectCard.astro";
 import Container from "../layout/Container.astro";
 import { ui } from "../../i18n/ui";
 import {
-  getBlogEntryPath,
   getEntryPath,
-  getPublishedBlogEntries,
   getPublishedEntries,
 } from "../../lib/content/translations";
 import { type SiteCollection, type SiteLang } from "../../i18n/utils";
@@ -18,14 +16,11 @@ interface Props {
 
 const { collection, lang } = Astro.props;
 const copy = ui[lang];
-const entries = collection === "writing"
-  ? await getPublishedBlogEntries(lang)
-  : await getPublishedEntries(collection, lang);
+const entries = await getPublishedEntries(collection, lang);
 
 const collectionEyebrow: Record<SiteCollection, string> = {
   writing: "Blog",
   projects: "Projects",
-  research: "Research",
   life: "Life",
 };
 ---
@@ -63,7 +58,7 @@ const collectionEyebrow: Record<SiteCollection, string> = {
         <div class="flat-list mt-8">
           {entries.map((entry, index) => (
             <ArticleCard
-              href={collection === "writing" ? getBlogEntryPath(lang, entry) : getEntryPath(collection, lang, entry)}
+              href={getEntryPath(collection, lang, entry)}
               title={entry.data.title}
               summary={entry.data.summary}
               publishedAt={entry.data.publishedAt}

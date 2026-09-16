@@ -48,12 +48,14 @@ predictable scaling 最稳的部分是 loss 预测。
 
 loss 有一个先天的优势：噪声小、下降平滑，适合用 scaling law 建模。论文用这样一个幂律形式来拟合：
 
-$$L(C) = a C^{b} + c$$
+$$
+L(C) = a C^{b} + c
+$$
 
-- \(C\) 是训练 compute
-- \(L(C)\) 是最终的 loss
-- \(a, b, c\) 从一组小模型的 loss 数据中拟合得到
-- \(c\) 是一个特别有意思的量：irreducible loss——即使 compute 无限增加也无法消除的残余损失
+- $C$ 是训练 compute
+- $L(C)$ 是最终的 loss
+- $a, b, c$ 从一组小模型的 loss 数据中拟合得到
+- $c$ 是一个特别有意思的量：irreducible loss——即使 compute 无限增加也无法消除的残余损失
 
 论文用的拟合数据来自比 GPT-4 少 **10,000 倍 compute** 的模型。在 GPT-4 训练刚开始后、还没看到任何 GPT-4 自己的 loss 数据时，就已经预测出了它最终会收敛到什么水平——而且精度很高。
 
@@ -71,7 +73,9 @@ loss 好预测这件事很重要，但它不是最终目标。没有人关心模
 
 它用最多比 GPT-4 少 **1,000 倍 compute** 的模型，外推 GPT-4 在 HumanEval 部分问题上的表现。方法不是对 pass rate 直接做线性回归——那会很不可靠——而是对 **mean log pass rate** 做近似幂律建模：
 
-$$-\mathbb{E}_{P}\!\left[\log\!\bigl(\text{pass\_rate}(C)\bigr)\right] = \alpha C^{-k}$$
+$$
+-\mathbb{E}_{P}\!\left[\log\!\bigl(\text{pass\_rate}(C)\bigr)\right] = \alpha C^{-k}
+$$
 
 直观理解：compute 越大，pass rate 越高，log(pass rate) 越接近 0，则负的 mean log pass rate 随 compute 增大而下降。这种处理方式比直接对 pass rate 建模更稳定，因为它压缩了极端值的方差。
 

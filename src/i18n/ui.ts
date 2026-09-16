@@ -79,11 +79,6 @@ export const ui: Record<SiteLang, Dictionary> = {
         description: "展示项目背景、技术路径、关键难点与最终结果。",
         empty: "项目案例正在补充中。",
       },
-      research: {
-        title: "研究",
-        description: "沉淀论文阅读、实验日志和研究问题。",
-        empty: "研究笔记正在补充中。",
-      },
       life: {
         title: "生活",
         description: "保留少量有结构的生活记录与阶段性复盘。",
@@ -148,11 +143,6 @@ export const ui: Record<SiteLang, Dictionary> = {
         title: "Projects",
         description: "Project case studies with context, technical path, and results.",
         empty: "Project entries are being expanded.",
-      },
-      research: {
-        title: "Research",
-        description: "Paper notes, experiment logs, and research questions in progress.",
-        empty: "Research notes are still being collected.",
       },
       life: {
         title: "Life",

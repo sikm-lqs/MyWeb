@@ -41,7 +41,7 @@ Implemented:
 - Chinese and English home pages with a hero-led single-column layout
 - Chinese and English About pages
 - Three public content channels: `writing`, `projects`, `life`
-- Blog pages aggregate `writing` and the internal `research` content source
+- Blog pages are driven by the `writing` collection, which carries technical articles, paper notes, and engineering thoughts
 - List and detail pages for each public channel
 - Guestbook and friends/link placeholder pages
 - Chinese routes under `/` and English routes under `/en`
@@ -84,7 +84,6 @@ Known next priorities:
 │   ├── content/                      # MDX content source
 │   │   ├── writing/{zh,en}/
 │   │   ├── projects/{zh,en}/
-│   │   ├── research/{zh,en}/          # Internal source now exposed through Blog
 │   │   └── life/{zh,en}/
 │   ├── i18n/                         # UI copy, languages, route helpers
 │   ├── layouts/                      # BaseLayout, ArticleLayout, ProjectLayout
@@ -101,8 +100,8 @@ Known next priorities:
 
 Content collections are defined in `src/content.config.ts`.
 
-- `writing`, `research`, and `life` use the shared article schema and may include `readTime`
-- The public Blog route is `/writing`; it aggregates both `writing` and `research`
+- `writing` and `life` use the shared article schema and may include `readTime`
+- The public Blog route is `/writing`; it serves the `writing` collection
 - `projects` adds `status`, `stack`, `repoUrl`, `demoUrl`, and `caseStudyUrl`
 - Supported languages are `zh-CN` and `en`
 - `draft: true` excludes content from public lists and homepage sections
@@ -120,7 +119,6 @@ When adding content, follow `dev-docs/内容发布流程.md` and run `npm run bu
 - English collection example: `/en/writing`
 - Chinese detail example: `/writing/agent-state-management`
 - English detail example: `/en/writing/agent-state-management`
-- Former `research` entries are generated under `/writing/{routeSlug}` and `/en/writing/{routeSlug}`
 
 Language switching searches for a non-draft entry in the same collection with the same `translationKey` and the target language. If none exists, it falls back to the target-language collection page.
 
@@ -129,7 +127,7 @@ Language switching searches for a non-draft entry in the same collection with th
 The home page is data-driven:
 
 - Open Projects: latest published `projects` entries, max 3
-- Latest Blog: latest published `writing` and `research` entries combined, max 4
+- Latest Blog: latest published `writing` entries, max 4
 - Life Notes: latest published `life` entries, max 2
 
 Entries are sorted by `publishedAt` descending.
@@ -137,8 +135,6 @@ Entries are sorted by `publishedAt` descending.
 ## Current TODO
 
 - Recheck the mobile home page after the denser desktop layout.
-- Consider migrating or renaming `src/content/research` into a more general blog source later.
-- Add redirects from old `/research/*` paths before public launch if those URLs were ever shared.
 
 ## Visual Baseline
 

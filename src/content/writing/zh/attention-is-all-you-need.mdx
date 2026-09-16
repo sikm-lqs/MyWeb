@@ -65,7 +65,9 @@ CNN 稍好一点。ConvS2S 把任意两个位置的交互路径降到线性 O(n)
 
 它把每个位置同时变成 query、key、value，用 query 和所有 key 算相似度，softmax 归一化后对 value 做加权和：
 
-$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V$$
+$$
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right) V
+$$
 
 每个位置都独立地、同时地执行这个计算，不需要等任何其他位置。这就是并行化的来源，也是顺序操作数能降到 O(1) 的原因。
 

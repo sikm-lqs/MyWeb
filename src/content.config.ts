@@ -47,6 +47,5 @@ const projectCollection = defineCollection({
 export const collections = {
   writing: articleCollection("./src/content/writing"),
   projects: projectCollection,
-  research: articleCollection("./src/content/research"),
   life: articleCollection("./src/content/life"),
 };

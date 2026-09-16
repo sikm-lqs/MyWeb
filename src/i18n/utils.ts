@@ -14,7 +14,7 @@ export const WECHAT_URL = "";
 export const WECHAT_HANDLE = "";
 
 export type SiteLang = (typeof SUPPORTED_LANGS)[number];
-export type SiteCollection = "writing" | "projects" | "research" | "life";
+export type SiteCollection = "writing" | "projects" | "life";
 
 export const isEnglish = (lang: SiteLang) => lang === "en";
 
